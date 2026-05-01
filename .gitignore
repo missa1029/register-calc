@@ -1,0 +1,19 @@
+# Claude Code
+.claude/
+
+# Backup / unrelated source files
+入金計算.html
+script.js
+style.css
+cash register.html
+cash_register.html
+
+# Office / images
+*.xlsx
+*.xlsm
+*.jpg
+*.png
+
+# OS
+Thumbs.db
+.DS_Store
