@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="入金計算">
+<title>入金計算</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #f3f4f6;
+    --bg-card: #ffffff;
+    --border: #d1d5db;
+    --text: #111827;
+    --text-sub: #6b7280;
+    --accent: #2563eb;
+    --error-bg: #fee2e2;
+    --error-text: #991b1b;
+    --header-bg: #f3f4f6;
+    --deposit-bg: #eff6ff;
+    --reserve-bg: #f0fdf4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f172a;
+      --bg-card: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --text-sub: #94a3b8;
+      --accent: #60a5fa;
+      --error-bg: #7f1d1d;
+      --error-text: #fecaca;
+      --header-bg: #334155;
+      --deposit-bg: #1e3a5f;
+      --reserve-bg: #1e3a2f;
+    }
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', Meiryo, sans-serif;
+    font-size: 16px;
+    line-height: 1.4;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .totals-bar {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+    padding-top: env(safe-area-inset-top);
+  }
+  .total-item {
+    background: var(--bg-card);
+    padding: 10px 6px;
+    text-align: center;
+    min-width: 0;
+  }
+  .total-item.deposit { background: var(--deposit-bg); }
+  .total-item.reserve { background: var(--reserve-bg); }
+  .total-item .label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-sub);
+    letter-spacing: 0.05em;
+  }
+  .total-item .value {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+    word-break: break-all;
+  }
+
+  .settings {
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .target-select {
+    display: flex;
+    gap: 4px;
+  }
+  .target-select label {
+    cursor: pointer;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--bg);
+    user-select: none;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .target-select input { display: none; }
+  .target-select input:checked + span {
+    color: #fff;
+  }
+  .target-select label:has(input:checked) {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  #reset-btn {
+    margin-left: auto;
+    padding: 0 16px;
+    height: 44px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 14px;
+  }
+  #reset-btn:active { background: var(--header-bg); }
+
+  #error {
+    margin: 10px 12px 0;
+    padding: 10px 12px;
+    background: var(--error-bg);
+    color: var(--error-text);
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 14px;
+  }
+  #error div + div { margin-top: 4px; }
+  .hidden { display: none !important; }
+
+  .custom-details {
+    margin: 10px 12px 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .custom-details summary {
+    padding: 12px;
+    cursor: pointer;
+    background: var(--header-bg);
+    user-select: none;
+    font-weight: 500;
+    font-size: 14px;
+    list-style: none;
+  }
+  .custom-details summary::-webkit-details-marker { display: none; }
+  .custom-details summary::before {
+    content: '▶ ';
+    font-size: 10px;
+    margin-right: 4px;
+    transition: transform 0.15s;
+    display: inline-block;
+  }
+  .custom-details[open] summary::before { transform: rotate(90deg); }
+  .custom-hint {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-sub);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tables-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    padding: 10px 12px 20px;
+  }
+  @media (max-width: 899px) {
+    .tables-grid { grid-template-columns: 1fr; gap: 12px; }
+  }
+
+  .table-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .table-section.deposit { border-color: var(--accent); }
+  .table-section.reserve { border-color: #16a34a; }
+
+  .table-section h2 {
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .table-section.deposit h2 { background: var(--deposit-bg); }
+  .table-section.reserve h2 { background: var(--reserve-bg); }
+  .table-section h2 .total {
+    font-variant-numeric: tabular-nums;
+    font-size: 15px;
+  }
+
+  /* 銀行入金 目標/実績サブライン */
+  .deposit-info {
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--text-sub);
+    border-bottom: 1px solid var(--border);
+    background: var(--deposit-bg);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .deposit-info .status-ok { color: #16a34a; font-weight: 700; }
+  .deposit-info .status-ng { color: var(--error-text); font-weight: 700; }
+
+  /* エラー時の結果テーブル赤強調 */
+  .tables-grid.has-error .table-section.deposit,
+  .tables-grid.has-error .table-section.reserve {
+    border-color: var(--error-text);
+  }
+  .tables-grid.has-error .table-section.deposit h2,
+  .tables-grid.has-error .table-section.reserve h2 {
+    background: var(--error-bg);
+    color: var(--error-text);
+  }
+  .tables-grid.has-error .table-section.deposit .deposit-info {
+    background: var(--error-bg);
+    color: var(--error-text);
+  }
+  .tables-grid.has-error .table-section.deposit .deposit-info .status-ng {
+    color: inherit;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th, td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    text-align: right;
+    font-size: 14px;
+  }
+  th:first-child, td:first-child {
+    text-align: left;
+    white-space: nowrap;
+  }
+  thead th {
+    background: var(--header-bg);
+    font-weight: normal;
+    color: var(--text-sub);
+    font-size: 11px;
+    padding: 6px 8px;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  td.value-cell {
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    padding: 12px 8px;
+  }
+  td.no-roll { color: var(--text-sub); text-align: center; }
+  td.input-cell { padding: 4px; }
+
+  input.num-input {
+    width: 100%;
+    min-width: 50px;
+    padding: 12px 8px;
+    font-size: 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input.num-input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+    border-color: transparent;
+    background: var(--bg-card);
+  }
+  input.num-input::placeholder { color: var(--text-sub); opacity: 0.5; }
+
+  td.zero { color: var(--text-sub); }
+
+  @media (max-width: 899px) {
+    .total-item .value { font-size: 16px; }
+    .total-item .label { font-size: 10px; }
+    th, td { padding: 8px 6px; font-size: 14px; }
+    td.value-cell { padding: 14px 6px; }
+    input.num-input { padding: 14px 8px; font-size: 16px; }
+    .table-section h2 { padding: 12px; font-size: 15px; }
+    .table-section h2 .total { font-size: 16px; }
+  }
+
+  /* PC: 列幅調整 */
+  @media (min-width: 900px) {
+    th:nth-child(1), td:nth-child(1) { width: 38%; }
+    th:nth-child(2), td:nth-child(2) { width: 31%; }
+    th:nth-child(3), td:nth-child(3) { width: 31%; }
+  }
+</style>
+</head>
+<body>
+
+<div class="totals-bar">
+  <div class="total-item">
+    <span class="label">レジ金</span>
+    <span class="value" id="bar-register">¥0</span>
+  </div>
+  <div class="total-item deposit">
+    <span class="label">銀行入金</span>
+    <span class="value" id="bar-deposit">¥0</span>
+  </div>
+  <div class="total-item reserve">
+    <span class="label">翌日準備金</span>
+    <span class="value" id="bar-reserve">¥0</span>
+  </div>
+</div>
+
+<div class="settings">
+  <span style="font-size:13px;color:var(--text-sub);">翌日準備金</span>
+  <div class="target-select">
+    <label><input type="radio" name="target" value="300000" checked><span>30万</span></label>
+    <label><input type="radio" name="target" value="290000"><span>29万</span></label>
+  </div>
+  <button id="reset-btn" type="button">リセット</button>
+</div>
+
+<div id="error" class="hidden"></div>
+
+<details class="custom-details">
+  <summary>カスタム指示（金種ごとに枚数・棒金を強制指定）</summary>
+  <div class="custom-hint">空欄は自動振り分け。値を入れた金種は指定枚数/本数を入金に確定します。</div>
+  <table>
+    <thead>
+      <tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr>
+    </thead>
+    <tbody id="custom-body"></tbody>
+  </table>
+</details>
+
+<div class="tables-grid">
+  <section class="table-section">
+    <h2>レジ金（入力）<span class="total" id="register-total">¥0</span></h2>
+    <table>
+      <thead>
+        <tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr>
+      </thead>
+      <tbody id="register-body"></tbody>
+    </table>
+  </section>
+
+  <section class="table-section deposit">
+    <h2>銀行入金<span class="total" id="deposit-total">¥0</span></h2>
+    <div class="deposit-info" id="deposit-info"></div>
+    <table>
+      <thead>
+        <tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr>
+      </thead>
+      <tbody id="deposit-body"></tbody>
+    </table>
+  </section>
+
+  <section class="table-section reserve">
+    <h2>翌日準備金<span class="total" id="reserve-total">¥0</span></h2>
+    <table>
+      <thead>
+        <tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr>
+      </thead>
+      <tbody id="reserve-body"></tbody>
+    </table>
+  </section>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const DENOMS = [
+    { key: '10000', label: '10000円札', value: 10000, hasRoll: false, depositable: true,  allIn: false },
+    { key: '5000',  label: '5000円札',  value: 5000,  hasRoll: false, depositable: false, allIn: false },
+    { key: '2000',  label: '2000円札',  value: 2000,  hasRoll: false, depositable: true,  allIn: false },
+    { key: '1000',  label: '1000円札',  value: 1000,  hasRoll: false, depositable: true,  allIn: false },
+    { key: '500',   label: '500円玉',   value: 500,   hasRoll: true,  depositable: false, allIn: false },
+    { key: '100',   label: '100円玉',   value: 100,   hasRoll: true,  depositable: true,  allIn: false },
+    { key: '50',    label: '50円玉',    value: 50,    hasRoll: true,  depositable: true,  allIn: false },
+    { key: '10',    label: '10円玉',    value: 10,    hasRoll: true,  depositable: true,  allIn: false },
+    { key: '5',     label: '5円玉',     value: 5,     hasRoll: true,  depositable: true,  allIn: true  },
+    { key: '1',     label: '1円玉',     value: 1,     hasRoll: true,  depositable: true,  allIn: true  },
+  ];
+  const ROLL_COUNT = 50;
+  // 大きい順に貪欲法で詰めることで枚数を最小化する（日本円は canonical 体系）。
+  const FILL_ORDER = ['10000', '2000', '1000', '5000', '500', '100', '50', '10'];
+  const RESERVED_1000_COUNT = 30;
+  const STORAGE_KEY = 'nyukin_keisan_v1';
+
+  const state = {
+    target: 300000,
+    register: {},
+    custom: {},
+  };
+  DENOMS.forEach(d => {
+    state.register[d.key] = { count: 0, rolls: 0 };
+    state.custom[d.key]   = { count: null, rolls: null };
+  });
+
+  function denomOf(key) { return DENOMS.find(d => d.key === key); }
+
+  function totalOf(stockMap) {
+    let total = 0;
+    DENOMS.forEach(d => {
+      const s = stockMap[d.key];
+      if (!s) return;
+      total += (s.count || 0) * d.value;
+      if (d.hasRoll) total += (s.rolls || 0) * ROLL_COUNT * d.value;
+    });
+    return total;
+  }
+
+  function formatYen(n) {
+    const sign = n < 0 ? '-' : '';
+    return sign + '¥' + Math.abs(n).toLocaleString('ja-JP');
+  }
+
+  function verifyIntegrity(deposit, reserve) {
+    const errs = [];
+    DENOMS.forEach(d => {
+      const r = state.register[d.key];
+      const dp = deposit[d.key];
+      const rs = reserve[d.key];
+      if (dp.count + rs.count !== r.count) {
+        errs.push('【整合性エラー】' + d.label + ': 入金' + dp.count + '枚 + 準備金' + rs.count + '枚 ≠ レジ金' + r.count + '枚');
+      }
+      if (rs.count < 0) {
+        errs.push('【整合性エラー】' + d.label + ': 翌日準備金の枚数が負（' + rs.count + '枚）');
+      }
+      if (d.hasRoll) {
+        if (dp.rolls + rs.rolls !== r.rolls) {
+          errs.push('【整合性エラー】' + d.label + '棒金: 入金' + dp.rolls + '本 + 準備金' + rs.rolls + '本 ≠ レジ金' + r.rolls + '本');
+        }
+        if (rs.rolls < 0) {
+          errs.push('【整合性エラー】' + d.label + '棒金: 翌日準備金の本数が負（' + rs.rolls + '本）');
+        }
+      }
+    });
+    const tReg = totalOf(state.register);
+    const tDep = totalOf(deposit);
+    const tRes = totalOf(reserve);
+    if (tReg !== tDep + tRes) {
+      errs.push('【整合性エラー】合計金額が不一致（レジ金' + formatYen(tReg) + ' ≠ 銀行入金' + formatYen(tDep) + ' + 翌日準備金' + formatYen(tRes) + '）');
+    }
+    return errs;
+  }
+
+  function calculate() {
+    const errors = [];
+    const deposit = {};
+    DENOMS.forEach(d => { deposit[d.key] = { count: 0, rolls: 0 }; });
+
+    const registerTotal = totalOf(state.register);
+    const reserveTarget = state.target;
+    const depositTarget = registerTotal - reserveTarget;
+
+    if (depositTarget < 0) {
+      errors.push('レジ金（' + formatYen(registerTotal) + '）が翌日準備金（' + formatYen(reserveTarget) + '）に満たないため作れません');
+    } else {
+      // 1. カスタム指示適用 + 在庫超過チェック
+      DENOMS.forEach(d => {
+        const c = state.custom[d.key];
+        const r = state.register[d.key];
+        if (c.count !== null) {
+          if (c.count > r.count) {
+            errors.push(d.label + 'のカスタム枚数（' + c.count + '）が在庫（' + r.count + '）を超えています');
+            deposit[d.key].count = r.count;
+          } else {
+            deposit[d.key].count = c.count;
+          }
+        }
+        if (d.hasRoll && c.rolls !== null) {
+          if (c.rolls > r.rolls) {
+            errors.push(d.label + 'のカスタム棒金（' + c.rolls + '本）が在庫（' + r.rolls + '本）を超えています');
+            deposit[d.key].rolls = r.rolls;
+          } else {
+            deposit[d.key].rolls = c.rolls;
+          }
+        }
+      });
+
+      // 2. 5円・1円バラ全部（カスタム指示がない場合のみ）
+      DENOMS.filter(d => d.allIn).forEach(d => {
+        if (state.custom[d.key].count === null) {
+          deposit[d.key].count = state.register[d.key].count;
+        }
+      });
+
+      let depositTotal = totalOf(deposit);
+
+      // 3. 銀行入金ターゲット超過チェック
+      if (depositTotal > depositTarget) {
+        errors.push('カスタム指示で銀行入金額（' + formatYen(depositTarget) + '）を超えています（超過: ' + formatYen(depositTotal - depositTarget) + '）');
+      } else {
+        let remaining = depositTarget - depositTotal;
+
+        // 4. 大きい順にバラのみで詰める（カスタム指示済みはスキップ）
+        // 1000円札は RESERVED_1000_COUNT 枚を翌日準備金に残す
+        for (const k of FILL_ORDER) {
+          if (remaining <= 0) break;
+          if (state.custom[k].count !== null) continue;
+          const d = denomOf(k);
+          let available = state.register[k].count;
+          if (k === '1000') {
+            available = Math.max(0, available - RESERVED_1000_COUNT);
+          }
+          const add = Math.min(available, Math.floor(remaining / d.value));
+          deposit[k].count = add;
+          remaining -= add * d.value;
+        }
+
+        // 5. 銀行入金不足チェック
+        if (remaining > 0) {
+          errors.push('銀行入金（' + formatYen(depositTarget) + '）に充てられる金種が不足しています（不足: ' + formatYen(remaining) + '）');
+        }
+      }
+    }
+
+    // 6. 翌日準備金 = レジ金 − 銀行入金
+    const reserve = {};
+    DENOMS.forEach(d => {
+      reserve[d.key] = {
+        count: state.register[d.key].count - deposit[d.key].count,
+        rolls: state.register[d.key].rolls - deposit[d.key].rolls,
+      };
+    });
+
+    // 7. 整合性検証（保険: 計算結果が保存則を満たすか）
+    const integrityErrors = verifyIntegrity(deposit, reserve);
+    if (integrityErrors.length > 0) {
+      errors.unshift.apply(errors, integrityErrors);
+    }
+
+    return { deposit, reserve, errors, depositTarget };
+  }
+
+  function buildInputBody(tbodyId, type) {
+    const tbody = document.getElementById(tbodyId);
+    tbody.innerHTML = '';
+    DENOMS.forEach(d => {
+      const tr = document.createElement('tr');
+      const tdLabel = document.createElement('td');
+      tdLabel.textContent = d.label;
+      tr.appendChild(tdLabel);
+
+      const tdCount = document.createElement('td');
+      tdCount.className = 'input-cell';
+      tdCount.appendChild(makeInput(d, 'count', type));
+      tr.appendChild(tdCount);
+
+      const tdRolls = document.createElement('td');
+      if (d.hasRoll) {
+        tdRolls.className = 'input-cell';
+        tdRolls.appendChild(makeInput(d, 'rolls', type));
+      } else {
+        tdRolls.className = 'no-roll';
+        tdRolls.textContent = '―';
+      }
+      tr.appendChild(tdRolls);
+      tbody.appendChild(tr);
+    });
+  }
+
+  function makeInput(d, field, type) {
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.inputMode = 'numeric';
+    inp.pattern = '[0-9]*';
+    inp.autocomplete = 'off';
+    inp.className = 'num-input ' + type + '-input';
+    inp.dataset.key = d.key;
+    inp.dataset.field = field;
+    if (type === 'register') {
+      const v = state.register[d.key][field];
+      inp.value = v ? String(v) : '';
+    } else {
+      const v = state.custom[d.key][field];
+      inp.value = v !== null ? String(v) : '';
+      inp.placeholder = '自動';
+    }
+    return inp;
+  }
+
+  function buildResultBody(tbodyId) {
+    const tbody = document.getElementById(tbodyId);
+    tbody.innerHTML = '';
+    DENOMS.forEach(d => {
+      const tr = document.createElement('tr');
+      const tdLabel = document.createElement('td');
+      tdLabel.textContent = d.label;
+      tr.appendChild(tdLabel);
+
+      const tdCount = document.createElement('td');
+      tdCount.className = 'value-cell';
+      tdCount.dataset.key = d.key;
+      tdCount.dataset.field = 'count';
+      tdCount.textContent = '0';
+      tr.appendChild(tdCount);
+
+      const tdRolls = document.createElement('td');
+      if (d.hasRoll) {
+        tdRolls.className = 'value-cell';
+        tdRolls.dataset.key = d.key;
+        tdRolls.dataset.field = 'rolls';
+        tdRolls.textContent = '0';
+      } else {
+        tdRolls.className = 'no-roll';
+        tdRolls.textContent = '―';
+      }
+      tr.appendChild(tdRolls);
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updateResultTable(tbodyId, stockMap) {
+    DENOMS.forEach(d => {
+      const cells = document.querySelectorAll('#' + tbodyId + ' td[data-key="' + d.key + '"]');
+      cells.forEach(cell => {
+        const f = cell.dataset.field;
+        const v = stockMap[d.key][f] || 0;
+        cell.textContent = v;
+        if (v === 0) cell.classList.add('zero');
+        else cell.classList.remove('zero');
+      });
+    });
+  }
+
+  function updateDepositInfo(depositTarget, actual, errors) {
+    const el = document.getElementById('deposit-info');
+    if (!el) return;
+    if (errors.length > 0) {
+      el.innerHTML = '<span class="status-ng">✗ エラーのため計算できません</span>';
+      return;
+    }
+    const matched = depositTarget === actual;
+    el.innerHTML =
+      '目標: ' + formatYen(depositTarget) +
+      '　実績: ' + formatYen(actual) +
+      '　<span class="' + (matched ? 'status-ok' : 'status-ng') + '">' +
+      (matched ? '✓' : '✗') + '</span>';
+  }
+
+  function update() {
+    const { deposit, reserve, errors, depositTarget } = calculate();
+
+    updateResultTable('deposit-body', deposit);
+    updateResultTable('reserve-body', reserve);
+
+    const tReg = totalOf(state.register);
+    const tDep = totalOf(deposit);
+    const tRes = totalOf(reserve);
+
+    document.getElementById('bar-register').textContent = formatYen(tReg);
+    document.getElementById('bar-deposit').textContent = formatYen(tDep);
+    document.getElementById('bar-reserve').textContent = formatYen(tRes);
+    document.getElementById('register-total').textContent = formatYen(tReg);
+    document.getElementById('deposit-total').textContent = formatYen(tDep);
+    document.getElementById('reserve-total').textContent = formatYen(tRes);
+
+    document.querySelector('.tables-grid').classList.toggle('has-error', errors.length > 0);
+    updateDepositInfo(depositTarget, tDep, errors);
+
+    const errEl = document.getElementById('error');
+    if (errors.length) {
+      errEl.innerHTML = errors.map(e => '<div>⚠ ' + escapeHtml(e) + '</div>').join('');
+      errEl.classList.remove('hidden');
+    } else {
+      errEl.classList.add('hidden');
+    }
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        target: state.target,
+        register: state.register,
+        custom: state.custom,
+      }));
+    } catch (e) {}
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (typeof data.target === 'number') state.target = data.target;
+      if (data.register) {
+        DENOMS.forEach(d => {
+          if (data.register[d.key]) {
+            state.register[d.key].count = Number(data.register[d.key].count) || 0;
+            state.register[d.key].rolls = Number(data.register[d.key].rolls) || 0;
+          }
+        });
+      }
+      if (data.custom) {
+        DENOMS.forEach(d => {
+          if (data.custom[d.key]) {
+            const c = data.custom[d.key].count;
+            const r = data.custom[d.key].rolls;
+            state.custom[d.key].count = (c === null || c === undefined || c === '') ? null : Number(c);
+            state.custom[d.key].rolls = (r === null || r === undefined || r === '') ? null : Number(r);
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  function bindInputEvents() {
+    document.addEventListener('input', (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement)) return;
+      if (!t.classList.contains('register-input') && !t.classList.contains('custom-input')) return;
+
+      // 全角数字 → 半角に変換してからフィルタ
+      const normalized = t.value.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+      const filtered = normalized.replace(/[^0-9]/g, '');
+      if (t.value !== filtered) t.value = filtered;
+
+      const key = t.dataset.key;
+      const field = t.dataset.field;
+
+      if (t.classList.contains('register-input')) {
+        state.register[key][field] = filtered === '' ? 0 : parseInt(filtered, 10);
+      } else {
+        state.custom[key][field] = filtered === '' ? null : parseInt(filtered, 10);
+      }
+      save();
+      update();
+    });
+
+    // Enterで次の入力欄へ
+    document.addEventListener('keydown', (e) => {
+      if (e.key !== 'Enter') return;
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement)) return;
+      if (!t.classList.contains('register-input') && !t.classList.contains('custom-input')) return;
+      e.preventDefault();
+      const inputs = Array.from(document.querySelectorAll('input.register-input, input.custom-input'))
+        .filter(i => i.offsetParent !== null);
+      const idx = inputs.indexOf(t);
+      if (idx >= 0 && idx < inputs.length - 1) {
+        const next = inputs[idx + 1];
+        next.focus();
+        next.select();
+      } else {
+        t.blur();
+      }
+    });
+
+    // フォーカス時に全選択（連続入力しやすく）
+    document.addEventListener('focusin', (e) => {
+      const t = e.target;
+      if (t instanceof HTMLInputElement && t.classList.contains('num-input')) {
+        setTimeout(() => t.select(), 0);
+      }
+    });
+  }
+
+  function bindControls() {
+    document.querySelectorAll('input[name="target"]').forEach(r => {
+      r.addEventListener('change', () => {
+        const checked = document.querySelector('input[name="target"]:checked');
+        if (checked) {
+          state.target = parseInt(checked.value, 10);
+          save();
+          update();
+        }
+      });
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      if (!confirm('全ての入力をリセットしますか？')) return;
+      DENOMS.forEach(d => {
+        state.register[d.key] = { count: 0, rolls: 0 };
+        state.custom[d.key]   = { count: null, rolls: null };
+      });
+      state.target = 300000;
+      const r = document.querySelector('input[name="target"][value="300000"]');
+      if (r) r.checked = true;
+      save();
+      buildInputBody('register-body', 'register');
+      buildInputBody('custom-body', 'custom');
+      update();
+    });
+  }
+
+  function init() {
+    load();
+    const r = document.querySelector('input[name="target"][value="' + state.target + '"]');
+    if (r) r.checked = true;
+    buildInputBody('register-body', 'register');
+    buildInputBody('custom-body', 'custom');
+    buildResultBody('deposit-body');
+    buildResultBody('reserve-body');
+    bindInputEvents();
+    bindControls();
+    update();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+</body>
+</html>
