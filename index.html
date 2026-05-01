@@ -396,16 +396,16 @@
   'use strict';
 
   const DENOMS = [
-    { key: '10000', label: '10000円札', value: 10000, hasRoll: false, depositable: true,  allIn: false },
-    { key: '5000',  label: '5000円札',  value: 5000,  hasRoll: false, depositable: false, allIn: false },
-    { key: '2000',  label: '2000円札',  value: 2000,  hasRoll: false, depositable: true,  allIn: false },
-    { key: '1000',  label: '1000円札',  value: 1000,  hasRoll: false, depositable: true,  allIn: false },
-    { key: '500',   label: '500円玉',   value: 500,   hasRoll: true,  depositable: false, allIn: false },
-    { key: '100',   label: '100円玉',   value: 100,   hasRoll: true,  depositable: true,  allIn: false },
-    { key: '50',    label: '50円玉',    value: 50,    hasRoll: true,  depositable: true,  allIn: false },
-    { key: '10',    label: '10円玉',    value: 10,    hasRoll: true,  depositable: true,  allIn: false },
-    { key: '5',     label: '5円玉',     value: 5,     hasRoll: true,  depositable: true,  allIn: true  },
-    { key: '1',     label: '1円玉',     value: 1,     hasRoll: true,  depositable: true,  allIn: true  },
+    { key: '10000', label: '10000円', value: 10000, hasRoll: false, depositable: true,  allIn: false },
+    { key: '5000',  label: '5000円',  value: 5000,  hasRoll: false, depositable: false, allIn: false },
+    { key: '2000',  label: '2000円',  value: 2000,  hasRoll: false, depositable: true,  allIn: false },
+    { key: '1000',  label: '1000円',  value: 1000,  hasRoll: false, depositable: true,  allIn: false },
+    { key: '500',   label: '500円',   value: 500,   hasRoll: true,  depositable: false, allIn: false },
+    { key: '100',   label: '100円',   value: 100,   hasRoll: true,  depositable: true,  allIn: false },
+    { key: '50',    label: '50円',    value: 50,    hasRoll: true,  depositable: true,  allIn: false },
+    { key: '10',    label: '10円',    value: 10,    hasRoll: true,  depositable: true,  allIn: false },
+    { key: '5',     label: '5円',     value: 5,     hasRoll: true,  depositable: true,  allIn: true  },
+    { key: '1',     label: '1円',     value: 1,     hasRoll: true,  depositable: true,  allIn: true  },
   ];
   const ROLL_COUNT = 50;
   // 大きい順に貪欲法で詰めることで枚数を最小化する（日本円は canonical 体系）。
@@ -481,7 +481,7 @@
     const depositTarget = registerTotal - reserveTarget;
 
     if (depositTarget < 0) {
-      errors.push('レジ金（' + formatYen(registerTotal) + '）が翌日準備金（' + formatYen(reserveTarget) + '）に満たないため作れません');
+      errors.push('レジ金（' + formatYen(registerTotal) + '）が不足しています');
     } else {
       // 1. カスタム指示適用 + 在庫超過チェック
       DENOMS.forEach(d => {
