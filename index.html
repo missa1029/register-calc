@@ -354,10 +354,22 @@
   .kb-grid [data-action="bs"]  { font-size: 18px; font-weight: 700; }
   .kb-grid [data-action="prev"],
   .kb-grid [data-action="next"] { font-size: 20px; font-weight: 700; color: var(--accent); }
+
+  #scroll-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg);
+  }
 </style>
 </head>
 <body>
 
+<div id="scroll-container">
 <div class="totals-bar">
   <div class="total-item">
     <span class="label">レジ金</span>
@@ -427,6 +439,7 @@
     </table>
   </section>
 </div>
+</div><!-- /scroll-container -->
 
 <div id="custom-kb" class="custom-kb hidden">
   <div class="kb-grid">
@@ -865,7 +878,6 @@
       setTimeout(() => t.select(), 0);
       if (isTouch) {
         activeInput = t;
-        t.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     });
 
@@ -944,7 +956,7 @@
       const kb = document.getElementById('custom-kb');
       kb.classList.remove('hidden');
       setTimeout(() => {
-        document.body.style.paddingBottom = kb.offsetHeight + 'px';
+        document.getElementById('scroll-container').style.bottom = kb.offsetHeight + 'px';
       }, 0);
     }
   }
