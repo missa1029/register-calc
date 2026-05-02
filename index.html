@@ -542,6 +542,21 @@
     return errs;
   }
 
+  function fillDenoms(keys, amount, deposit) {
+    let remaining = amount;
+    for (const k of keys) {
+      if (remaining <= 0) break;
+      if (state.custom[k].count !== null) continue;
+      const d = denomOf(k);
+      let available = state.register[k].count;
+      if (k === '1000') available = Math.max(0, available - RESERVED_1000_COUNT);
+      const add = Math.min(available, Math.floor(remaining / d.value));
+      deposit[k].count = add;
+      remaining -= add * d.value;
+    }
+    return remaining;
+  }
+
   function calculate() {
     const errors = [];
     const deposit = {};
@@ -591,33 +606,13 @@
       } else {
         let remaining = depositTarget - depositTotal;
 
-        // 4a. 1000円単位と1000円未満に分割
         const billsTarget = Math.floor(remaining / 1000) * 1000;
         const coinsTarget = remaining % 1000;
 
-        // 4b-1. 優先紙幣（10000・2000・1000）で1000円単位を埋める
-        let billsRemaining = billsTarget;
-        for (const k of BILLS_PRIMARY) {
-          if (billsRemaining <= 0) break;
-          if (state.custom[k].count !== null) continue;
-          const d = denomOf(k);
-          let available = state.register[k].count;
-          if (k === '1000') available = Math.max(0, available - RESERVED_1000_COUNT);
-          const add = Math.min(available, Math.floor(billsRemaining / d.value));
-          deposit[k].count = add;
-          billsRemaining -= add * d.value;
-        }
+        let billsRemaining = fillDenoms(BILLS_PRIMARY, billsTarget, deposit);
+        billsRemaining = fillDenoms(BILLS_FALLBACK, billsRemaining, deposit);
 
-        // 4b-2. 不足分を5000円で埋める（できるだけ多く）
-        if (billsRemaining > 0 && state.custom['5000'].count === null) {
-          const d = denomOf('5000');
-          const available = state.register['5000'].count;
-          const add = Math.min(available, Math.floor(billsRemaining / d.value));
-          deposit['5000'].count = add;
-          billsRemaining -= add * d.value;
-        }
-
-        // 4b-3. 5000円の端数が1000円以上なら5000円を1枚追加して1000・2000円で調整
+        // 5000円fill後に1000円以上端数が残る場合、5000円を1枚追加して1000・2000円で差分調整
         if (billsRemaining >= 1000 && state.custom['5000'].count === null &&
             deposit['5000'].count < state.register['5000'].count) {
           const overshoot = 5000 - billsRemaining;
@@ -634,19 +629,7 @@
           }
         }
 
-        // 4c. 1000円未満 ＋ 紙幣不足分を硬貨で埋める
-        let coinsRemaining = coinsTarget + billsRemaining;
-        for (const k of COINS_ORDER) {
-          if (coinsRemaining <= 0) break;
-          if (state.custom[k].count !== null) continue;
-          const d = denomOf(k);
-          const available = state.register[k].count;
-          const add = Math.min(available, Math.floor(coinsRemaining / d.value));
-          deposit[k].count = add;
-          coinsRemaining -= add * d.value;
-        }
-
-        remaining = coinsRemaining;
+        remaining = fillDenoms(COINS_ORDER, coinsTarget + billsRemaining, deposit);
 
         // 5. 銀行入金不足チェック
         if (remaining > 0) {
@@ -850,6 +833,7 @@
   }
 
   let activeInput = null;
+  let kbEl, scrollEl, kbHeight, hideTimer;
 
   function getVisibleInputs() {
     return Array.from(document.querySelectorAll('input.register-input, input.custom-input'))
@@ -870,14 +854,13 @@
   }
 
   function showKeyboard() {
-    const kb = document.getElementById('custom-kb');
-    kb.classList.remove('hidden');
-    document.getElementById('scroll-container').style.bottom = kb.offsetHeight + 'px';
+    kbEl.classList.remove('hidden');
+    scrollEl.style.bottom = kbHeight + 'px';
   }
 
   function hideKeyboard() {
-    document.getElementById('custom-kb').classList.add('hidden');
-    document.getElementById('scroll-container').style.bottom = '0';
+    kbEl.classList.add('hidden');
+    scrollEl.style.bottom = '0';
     activeInput = null;
   }
 
@@ -932,6 +915,7 @@
       if (!(t instanceof HTMLInputElement) || !t.classList.contains('num-input')) return;
       setTimeout(() => t.select(), 0);
       if (isTouch) {
+        clearTimeout(hideTimer);
         activeInput = t;
         showKeyboard();
       }
@@ -941,14 +925,14 @@
       if (!isTouch) return;
       const t = e.target;
       if (!(t instanceof HTMLInputElement) || !t.classList.contains('num-input')) return;
-      setTimeout(() => { if (document.activeElement === document.body) hideKeyboard(); }, 100);
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => { if (document.activeElement === document.body) hideKeyboard(); }, 100);
     });
 
     if (isTouch) {
-      const kb = document.getElementById('custom-kb');
-      kb.addEventListener('mousedown', e => e.preventDefault());
-      kb.addEventListener('pointerdown', e => e.preventDefault());
-      kb.addEventListener('click', (e) => {
+      kbEl.addEventListener('mousedown', e => e.preventDefault());
+      kbEl.addEventListener('pointerdown', e => e.preventDefault());
+      kbEl.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
         if (!btn || !activeInput) return;
         if (btn.dataset.n !== undefined) {
@@ -999,6 +983,13 @@
   }
 
   function init() {
+    if (isTouch) {
+      kbEl = document.getElementById('custom-kb');
+      scrollEl = document.getElementById('scroll-container');
+      kbEl.classList.remove('hidden');
+      kbHeight = kbEl.offsetHeight;
+      kbEl.classList.add('hidden');
+    }
     load();
     const r = document.querySelector('input[name="target"][value="' + state.target + '"]');
     if (r) r.checked = true;
