@@ -814,12 +814,23 @@
   }
 
   function showKeyboard() {
-    document.getElementById('custom-kb').classList.remove('hidden');
+    const kb = document.getElementById('custom-kb');
+    kb.classList.remove('hidden');
+    const kbHeight = kb.offsetHeight;
+    document.body.style.paddingBottom = kbHeight + 'px';
+    setTimeout(() => {
+      if (activeInput) activeInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 50);
   }
 
   function hideKeyboard() {
     document.getElementById('custom-kb').classList.add('hidden');
+    document.body.style.paddingBottom = '';
     activeInput = null;
+  }
+
+  function vibrate() {
+    if (navigator.vibrate) navigator.vibrate(15);
   }
 
   function triggerInput(el) {
@@ -896,9 +907,11 @@
         const btn = e.target.closest('button');
         if (!btn || !activeInput) return;
         if (btn.dataset.n !== undefined) {
+          vibrate();
           activeInput.value += btn.dataset.n;
           triggerInput(activeInput);
         } else if (btn.dataset.action === 'bs') {
+          vibrate();
           activeInput.value = activeInput.value.slice(0, -1);
           triggerInput(activeInput);
         } else if (btn.dataset.action === 'prev') {
