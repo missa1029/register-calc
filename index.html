@@ -813,26 +813,6 @@
     }
   }
 
-  function showKeyboard() {
-    const kb = document.getElementById('custom-kb');
-    kb.classList.remove('hidden');
-    const kbHeight = kb.offsetHeight;
-    document.body.style.paddingBottom = kbHeight + 'px';
-    setTimeout(() => {
-      if (activeInput) activeInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 50);
-  }
-
-  function hideKeyboard() {
-    document.getElementById('custom-kb').classList.add('hidden');
-    document.body.style.paddingBottom = '';
-    activeInput = null;
-  }
-
-  function vibrate() {
-    if (navigator.vibrate) navigator.vibrate(15);
-  }
-
   function triggerInput(el) {
     el.dispatchEvent(new Event('input', { bubbles: true }));
   }
@@ -885,7 +865,7 @@
       setTimeout(() => t.select(), 0);
       if (isTouch) {
         activeInput = t;
-        showKeyboard();
+        t.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
     });
 
@@ -893,10 +873,7 @@
       if (!isTouch) return;
       const t = e.target;
       if (!(t instanceof HTMLInputElement) || !t.classList.contains('num-input')) return;
-      // キーボードボタン押下による blur は無視（pointerdown で activeInput が保持される）
-      setTimeout(() => {
-        if (!activeInput) hideKeyboard();
-      }, 100);
+      setTimeout(() => { if (document.activeElement === document.body) activeInput = null; }, 100);
     });
 
     if (isTouch) {
@@ -907,11 +884,9 @@
         const btn = e.target.closest('button');
         if (!btn || !activeInput) return;
         if (btn.dataset.n !== undefined) {
-          vibrate();
           activeInput.value += btn.dataset.n;
           triggerInput(activeInput);
         } else if (btn.dataset.action === 'bs') {
-          vibrate();
           activeInput.value = activeInput.value.slice(0, -1);
           triggerInput(activeInput);
         } else if (btn.dataset.action === 'prev') {
@@ -919,9 +894,8 @@
         } else if (btn.dataset.action === 'next') {
           navigateInput(1);
         } else if (btn.dataset.action === 'done') {
-          const inp = activeInput;
-          hideKeyboard();
-          inp.blur();
+          activeInput.blur();
+          activeInput = null;
         }
       });
     }
@@ -966,6 +940,13 @@
     bindInputEvents();
     bindControls();
     update();
+    if (isTouch) {
+      const kb = document.getElementById('custom-kb');
+      kb.classList.remove('hidden');
+      setTimeout(() => {
+        document.body.style.paddingBottom = kb.offsetHeight + 'px';
+      }, 0);
+    }
   }
 
   if (document.readyState === 'loading') {
