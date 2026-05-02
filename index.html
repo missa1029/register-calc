@@ -608,13 +608,30 @@
           billsRemaining -= add * d.value;
         }
 
-        // 4b-2. 不足分を5000円で補う
+        // 4b-2. 不足分を5000円で埋める（できるだけ多く）
         if (billsRemaining > 0 && state.custom['5000'].count === null) {
           const d = denomOf('5000');
           const available = state.register['5000'].count;
           const add = Math.min(available, Math.floor(billsRemaining / d.value));
           deposit['5000'].count = add;
           billsRemaining -= add * d.value;
+        }
+
+        // 4b-3. 5000円の端数が1000円以上なら5000円を1枚追加して1000・2000円で調整
+        if (billsRemaining >= 1000 && state.custom['5000'].count === null &&
+            deposit['5000'].count < state.register['5000'].count) {
+          const overshoot = 5000 - billsRemaining;
+          const take1000 = state.custom['1000'].count === null
+            ? Math.min(deposit['1000'].count, Math.floor(overshoot / 1000)) : 0;
+          const rem = overshoot - take1000 * 1000;
+          const take2000 = (rem > 0 && state.custom['2000'].count === null)
+            ? Math.min(deposit['2000'].count, Math.floor(rem / 2000)) : 0;
+          if (take1000 * 1000 + take2000 * 2000 === overshoot) {
+            deposit['5000'].count += 1;
+            deposit['1000'].count -= take1000;
+            deposit['2000'].count -= take2000;
+            billsRemaining = 0;
+          }
         }
 
         // 4c. 1000円未満 ＋ 紙幣不足分を硬貨で埋める
