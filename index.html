@@ -278,6 +278,9 @@
     padding: 6px 8px;
     text-align: center;
   }
+  thead th:first-child {
+    text-align: center;
+  }
 
   td.value-cell {
     font-variant-numeric: tabular-nums;
@@ -310,6 +313,7 @@
   input.num-input::placeholder { color: var(--text-sub); opacity: 0.5; }
 
   td.zero { color: var(--text-sub); }
+  .table-section.combined tbody tr:nth-child(4) td { border-bottom: 2px solid var(--text-sub); }
 
   @media (max-width: 899px) {
     .total-item .value { font-size: 16px; }
@@ -938,11 +942,20 @@
     document.addEventListener('focusin', (e) => {
       const t = e.target;
       if (!(t instanceof HTMLInputElement) || !t.classList.contains('num-input')) return;
-      setTimeout(() => t.select(), 0);
+      t.dataset.fresh = 'true';
       if (isTouch) {
         clearTimeout(hideTimer);
         activeInput = t;
         showKeyboard();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement) || !t.classList.contains('num-input')) return;
+      if (t.dataset.fresh === 'true' && e.key >= '0' && e.key <= '9') {
+        t.value = '';
+        t.dataset.fresh = 'false';
       }
     });
 
@@ -961,6 +974,10 @@
         const btn = e.target.closest('button');
         if (!btn || !activeInput) return;
         if (btn.dataset.n !== undefined) {
+          if (activeInput.dataset.fresh === 'true') {
+            activeInput.value = '';
+            activeInput.dataset.fresh = 'false';
+          }
           activeInput.value += btn.dataset.n;
           triggerInput(activeInput);
         } else if (btn.dataset.action === 'bs') {
