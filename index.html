@@ -869,13 +869,24 @@
       .filter(i => i.offsetParent !== null);
   }
 
+  function scrollToInput(el) {
+    if (!scrollEl) return;
+    requestAnimationFrame(() => {
+      const visibleHeight = scrollEl.clientHeight;
+      const rect = el.getBoundingClientRect();
+      const offsetFromTop = rect.top + scrollEl.scrollTop;
+      const target = offsetFromTop - visibleHeight / 2 + rect.height / 2;
+      scrollEl.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+    });
+  }
+
   function navigateInput(dir) {
     const inputs = getVisibleInputs();
     const idx = inputs.indexOf(activeInput);
     const next = inputs[idx + dir];
     if (next) {
       next.focus();
-      setTimeout(() => next.select(), 0);
+      scrollToInput(next);
     } else if (dir > 0) {
       activeInput.blur();
       hideKeyboard();
@@ -885,6 +896,7 @@
   function showKeyboard() {
     kbEl.classList.remove('hidden');
     scrollEl.style.bottom = kbHeight + 'px';
+    if (activeInput) scrollToInput(activeInput);
   }
 
   function hideKeyboard() {
