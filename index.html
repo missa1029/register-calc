@@ -872,11 +872,11 @@
   function scrollToInput(el) {
     if (!scrollEl) return;
     requestAnimationFrame(() => {
-      const visibleHeight = scrollEl.clientHeight;
+      const visibleHeight = window.innerHeight - kbHeight;
       const rect = el.getBoundingClientRect();
       const offsetFromTop = rect.top + scrollEl.scrollTop;
       const target = offsetFromTop - visibleHeight / 2 + rect.height / 2;
-      scrollEl.scrollTo({ top: Math.max(0, target), behavior: 'smooth' });
+      scrollEl.scrollTop = Math.max(0, target);
     });
   }
 
