@@ -178,12 +178,12 @@
 
   .tables-grid {
     display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-columns: 1fr 2fr;
     gap: 10px;
     padding: 10px 12px 20px;
   }
   @media (max-width: 899px) {
-    .tables-grid { grid-template-columns: 1fr; gap: 12px; }
+    .tables-grid { grid-template-columns: 1fr; gap: 8px; padding: 8px 8px 20px; }
   }
 
   .table-section {
@@ -192,8 +192,7 @@
     border-radius: 8px;
     overflow: hidden;
   }
-  .table-section.deposit { border-color: var(--accent); }
-  .table-section.reserve { border-color: #16a34a; }
+  .table-section.combined { border-color: var(--accent); }
 
   .table-section h2 {
     margin: 0;
@@ -206,8 +205,6 @@
     justify-content: space-between;
     align-items: center;
   }
-  .table-section.deposit h2 { background: var(--deposit-bg); }
-  .table-section.reserve h2 { background: var(--reserve-bg); }
   .table-section h2 .total {
     font-variant-numeric: tabular-nums;
     font-size: 15px;
@@ -228,23 +225,36 @@
   .deposit-info .status-ok { color: #16a34a; font-weight: 700; }
   .deposit-info .status-ng { color: var(--error-text); font-weight: 700; }
 
+  /* combined テーブルヘッダー */
+  thead th.head-dep, thead th.head-res {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  thead th.head-dep { background: var(--deposit-bg); color: var(--accent); }
+  thead th.head-res { background: var(--reserve-bg); color: #16a34a; }
+  thead th.head-dep .total, thead th.head-res .total {
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    margin-left: 6px;
+    color: var(--text);
+  }
+  td.sep-col, th.sep-col { border-right: 2px solid var(--border); }
+
   /* エラー時の結果テーブル赤強調 */
-  .tables-grid.has-error .table-section.deposit,
-  .tables-grid.has-error .table-section.reserve {
+  .tables-grid.has-error .table-section.combined {
     border-color: var(--error-text);
   }
-  .tables-grid.has-error .table-section.deposit h2,
-  .tables-grid.has-error .table-section.reserve h2 {
+  .tables-grid.has-error thead th.head-dep,
+  .tables-grid.has-error thead th.head-res {
     background: var(--error-bg);
     color: var(--error-text);
   }
-  .tables-grid.has-error .table-section.deposit .deposit-info {
+  .tables-grid.has-error .deposit-info {
     background: var(--error-bg);
     color: var(--error-text);
   }
-  .tables-grid.has-error .table-section.deposit .deposit-info .status-ng {
-    color: inherit;
-  }
+  .tables-grid.has-error .deposit-info .status-ng { color: inherit; }
 
   table {
     width: 100%;
@@ -252,7 +262,7 @@
   }
   th, td {
     padding: 6px 8px;
-    border-bottom: 1px solid var(--border);
+    border: 1px solid var(--border);
     text-align: right;
     font-size: 14px;
   }
@@ -266,8 +276,8 @@
     color: var(--text-sub);
     font-size: 11px;
     padding: 6px 8px;
+    text-align: center;
   }
-  tbody tr:last-child td { border-bottom: none; }
 
   td.value-cell {
     font-variant-numeric: tabular-nums;
@@ -311,11 +321,25 @@
     .table-section h2 .total { font-size: 16px; }
   }
 
-  /* PC: 列幅調整 */
+  /* combined テーブル: モバイルは小さいパディング */
+  @media (max-width: 899px) {
+    .table-section.combined th,
+    .table-section.combined td { padding: 6px 4px; font-size: 13px; }
+    .table-section.combined td.value-cell { padding: 10px 4px; }
+  }
+
+  /* PC: combined テーブル列幅調整 */
   @media (min-width: 900px) {
-    th:nth-child(1), td:nth-child(1) { width: 38%; }
-    th:nth-child(2), td:nth-child(2) { width: 31%; }
-    th:nth-child(3), td:nth-child(3) { width: 31%; }
+    .table-section.combined th:nth-child(1),
+    .table-section.combined td:nth-child(1) { width: 22%; }
+    .table-section.combined th:nth-child(2),
+    .table-section.combined td:nth-child(2) { width: 19%; }
+    .table-section.combined th:nth-child(3),
+    .table-section.combined td:nth-child(3) { width: 19%; }
+    .table-section.combined th:nth-child(4),
+    .table-section.combined td:nth-child(4) { width: 19%; }
+    .table-section.combined th:nth-child(5),
+    .table-section.combined td:nth-child(5) { width: 21%; }
   }
 
   .custom-kb {
@@ -418,24 +442,21 @@
     </table>
   </section>
 
-  <section class="table-section deposit">
-    <h2>銀行入金<span class="total" id="deposit-total">¥0</span></h2>
+  <section class="table-section combined">
     <div class="deposit-info" id="deposit-info"></div>
     <table>
       <thead>
-        <tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr>
+        <tr>
+          <th rowspan="2">種類</th>
+          <th colspan="2" class="head-dep">銀行入金<span class="total" id="deposit-total">¥0</span></th>
+          <th colspan="2" class="head-res">翌日準備金<span class="total" id="reserve-total">¥0</span></th>
+        </tr>
+        <tr>
+          <th>枚数</th><th class="sep-col">棒金</th>
+          <th>枚数</th><th>棒金</th>
+        </tr>
       </thead>
-      <tbody id="deposit-body"></tbody>
-    </table>
-  </section>
-
-  <section class="table-section reserve">
-    <h2>翌日準備金<span class="total" id="reserve-total">¥0</span></h2>
-    <table>
-      <thead>
-        <tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr>
-      </thead>
-      <tbody id="reserve-body"></tbody>
+      <tbody id="result-body"></tbody>
     </table>
   </section>
 </div>
@@ -703,47 +724,50 @@
     return inp;
   }
 
-  function buildResultBody(tbodyId) {
-    const tbody = document.getElementById(tbodyId);
+  function buildResultBody() {
+    const tbody = document.getElementById('result-body');
     tbody.innerHTML = '';
     DENOMS.forEach(d => {
       const tr = document.createElement('tr');
+
       const tdLabel = document.createElement('td');
       tdLabel.textContent = d.label;
       tr.appendChild(tdLabel);
 
-      const tdCount = document.createElement('td');
-      tdCount.className = 'value-cell';
-      tdCount.dataset.key = d.key;
-      tdCount.dataset.field = 'count';
-      tdCount.textContent = '0';
-      tr.appendChild(tdCount);
+      ['deposit', 'reserve'].forEach(scope => {
+        const sep = scope === 'deposit' ? ' sep-col' : '';
 
-      const tdRolls = document.createElement('td');
-      if (d.hasRoll) {
-        tdRolls.className = 'value-cell';
-        tdRolls.dataset.key = d.key;
-        tdRolls.dataset.field = 'rolls';
-        tdRolls.textContent = '0';
-      } else {
-        tdRolls.className = 'no-roll';
-        tdRolls.textContent = '―';
-      }
-      tr.appendChild(tdRolls);
+        const tdCount = document.createElement('td');
+        tdCount.className = 'value-cell';
+        tdCount.textContent = '0';
+        resultCells[scope + ':' + d.key + ':count'] = tdCount;
+        tr.appendChild(tdCount);
+
+        const tdRolls = document.createElement('td');
+        if (d.hasRoll) {
+          tdRolls.className = 'value-cell' + sep;
+          tdRolls.textContent = '0';
+          resultCells[scope + ':' + d.key + ':rolls'] = tdRolls;
+        } else {
+          tdRolls.className = 'no-roll' + sep;
+          tdRolls.textContent = '―';
+        }
+        tr.appendChild(tdRolls);
+      });
+
       tbody.appendChild(tr);
     });
   }
 
-  function updateResultTable(tbodyId, stockMap) {
+  function updateResultTable(scope, stockMap) {
     DENOMS.forEach(d => {
-      const cells = document.querySelectorAll('#' + tbodyId + ' td[data-key="' + d.key + '"]');
-      cells.forEach(cell => {
-        const f = cell.dataset.field;
-        const v = stockMap[d.key][f] || 0;
+      for (const field of ['count', 'rolls']) {
+        const cell = resultCells[scope + ':' + d.key + ':' + field];
+        if (!cell) continue;
+        const v = stockMap[d.key][field] || 0;
         cell.textContent = v;
-        if (v === 0) cell.classList.add('zero');
-        else cell.classList.remove('zero');
-      });
+        cell.classList.toggle('zero', v === 0);
+      }
     });
   }
 
@@ -765,8 +789,8 @@
   function update() {
     const { deposit, reserve, errors, depositTarget } = calculate();
 
-    updateResultTable('deposit-body', deposit);
-    updateResultTable('reserve-body', reserve);
+    updateResultTable('deposit', deposit);
+    updateResultTable('reserve', reserve);
 
     const tReg = totalOf(state.register);
     const tDep = totalOf(deposit);
@@ -834,6 +858,7 @@
 
   let activeInput = null;
   let kbEl, scrollEl, kbHeight, hideTimer;
+  const resultCells = {};
 
   function getVisibleInputs() {
     return Array.from(document.querySelectorAll('input.register-input, input.custom-input'))
@@ -995,8 +1020,7 @@
     if (r) r.checked = true;
     buildInputBody('register-body', 'register');
     buildInputBody('custom-body', 'custom');
-    buildResultBody('deposit-body');
-    buildResultBody('reserve-body');
+    buildResultBody();
     bindInputEvents();
     bindControls();
     update();
