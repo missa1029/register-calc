@@ -313,6 +313,7 @@
   input.num-input::placeholder { color: var(--text-sub); opacity: 0.5; }
 
   td.zero { color: var(--text-sub); }
+  td.custom-val { color: #dc2626; }
   .table-section.combined tbody tr:nth-child(4) td { border-bottom: 2px solid var(--text-sub); }
 
   @media (max-width: 899px) {
@@ -509,17 +510,23 @@
   const RESERVED_1000_COUNT = 30;
   const STORAGE_KEY = 'nyukin_keisan_v1';
 
+  const DENOM_MAP = new Map(DENOMS.map(d => [d.key, d]));
+
   const state = {
     target: 300000,
     register: {},
     custom: {},
   };
-  DENOMS.forEach(d => {
-    state.register[d.key] = { count: 0, rolls: 0 };
-    state.custom[d.key]   = { count: null, rolls: null };
-  });
 
-  function denomOf(key) { return DENOMS.find(d => d.key === key); }
+  function resetState() {
+    DENOMS.forEach(d => {
+      state.register[d.key] = { count: 0, rolls: 0 };
+      state.custom[d.key]   = { count: null, rolls: null };
+    });
+  }
+  resetState();
+
+  function denomOf(key) { return DENOM_MAP.get(key); }
 
   function totalOf(stockMap) {
     let total = 0;
@@ -678,7 +685,7 @@
       errors.unshift.apply(errors, integrityErrors);
     }
 
-    return { deposit, reserve, errors, depositTarget };
+    return { deposit, reserve, errors, depositTarget, registerTotal };
   }
 
   function buildInputBody(tbodyId, type) {
@@ -771,12 +778,13 @@
         const v = stockMap[d.key][field] || 0;
         cell.textContent = v;
         cell.classList.toggle('zero', v === 0);
+        cell.classList.toggle('custom-val', scope === 'deposit' && state.custom[d.key][field] !== null);
       }
     });
   }
 
   function updateDepositInfo(depositTarget, actual, errors) {
-    const el = document.getElementById('deposit-info');
+    const el = elDepInfo;
     if (!el) return;
     if (errors.length > 0) {
       el.innerHTML = '<span class="status-ng">✗ エラーのため計算できません</span>';
@@ -791,31 +799,26 @@
   }
 
   function update() {
-    const { deposit, reserve, errors, depositTarget } = calculate();
+    const { deposit, reserve, errors, depositTarget, registerTotal } = calculate();
 
     updateResultTable('deposit', deposit);
     updateResultTable('reserve', reserve);
 
-    const tReg = totalOf(state.register);
     const tDep = totalOf(deposit);
     const tRes = totalOf(reserve);
 
-    document.getElementById('bar-register').textContent = formatYen(tReg);
-    document.getElementById('bar-deposit').textContent = formatYen(tDep);
-    document.getElementById('bar-reserve').textContent = formatYen(tRes);
-    document.getElementById('register-total').textContent = formatYen(tReg);
-    document.getElementById('deposit-total').textContent = formatYen(tDep);
-    document.getElementById('reserve-total').textContent = formatYen(tRes);
+    elBarRegister.textContent = elRegTotal.textContent = formatYen(registerTotal);
+    elBarDeposit.textContent  = elDepTotal.textContent = formatYen(tDep);
+    elBarReserve.textContent  = elResTotal.textContent = formatYen(tRes);
 
-    document.querySelector('.tables-grid').classList.toggle('has-error', errors.length > 0);
+    elTablesGrid.classList.toggle('has-error', errors.length > 0);
     updateDepositInfo(depositTarget, tDep, errors);
 
-    const errEl = document.getElementById('error');
     if (errors.length) {
-      errEl.innerHTML = errors.map(e => '<div>⚠ ' + escapeHtml(e) + '</div>').join('');
-      errEl.classList.remove('hidden');
+      elError.innerHTML = errors.map(e => '<div>⚠ ' + escapeHtml(e) + '</div>').join('');
+      elError.classList.remove('hidden');
     } else {
-      errEl.classList.add('hidden');
+      elError.classList.add('hidden');
     }
   }
 
@@ -852,8 +855,8 @@
           if (data.custom[d.key]) {
             const c = data.custom[d.key].count;
             const r = data.custom[d.key].rolls;
-            state.custom[d.key].count = (c === null || c === undefined || c === '') ? null : Number(c);
-            state.custom[d.key].rolls = (r === null || r === undefined || r === '') ? null : Number(r);
+            state.custom[d.key].count = (c == null || c === '') ? null : Number(c);
+            state.custom[d.key].rolls = (r == null || r === '') ? null : Number(r);
           }
         });
       }
@@ -862,6 +865,9 @@
 
   let activeInput = null;
   let kbEl, scrollEl, kbHeight, hideTimer;
+  let elBarRegister, elBarDeposit, elBarReserve;
+  let elRegTotal, elDepTotal, elResTotal;
+  let elError, elTablesGrid, elDepInfo;
   const resultCells = {};
 
   function getVisibleInputs() {
@@ -932,25 +938,6 @@
       update();
     });
 
-    // Enterで次の入力欄へ
-    document.addEventListener('keydown', (e) => {
-      if (e.key !== 'Enter') return;
-      const t = e.target;
-      if (!(t instanceof HTMLInputElement)) return;
-      if (!t.classList.contains('register-input') && !t.classList.contains('custom-input')) return;
-      e.preventDefault();
-      const inputs = getVisibleInputs();
-      const idx = inputs.indexOf(t);
-      if (idx >= 0 && idx < inputs.length - 1) {
-        const next = inputs[idx + 1];
-        next.focus();
-        next.select();
-      } else {
-        t.blur();
-      }
-    });
-
-    // フォーカス時に全選択（連続入力しやすく）
     document.addEventListener('focusin', (e) => {
       const t = e.target;
       if (!(t instanceof HTMLInputElement) || !t.classList.contains('num-input')) return;
@@ -968,6 +955,19 @@
       if (t.dataset.fresh === 'true' && e.key >= '0' && e.key <= '9') {
         t.value = '';
         t.dataset.fresh = 'false';
+      }
+      if (e.key === 'Enter' &&
+          (t.classList.contains('register-input') || t.classList.contains('custom-input'))) {
+        e.preventDefault();
+        const inputs = getVisibleInputs();
+        const idx = inputs.indexOf(t);
+        if (idx >= 0 && idx < inputs.length - 1) {
+          const next = inputs[idx + 1];
+          next.focus();
+          next.select();
+        } else {
+          t.blur();
+        }
       }
     });
 
@@ -1022,10 +1022,7 @@
 
     document.getElementById('reset-btn').addEventListener('click', () => {
       if (!confirm('全ての入力をリセットしますか？')) return;
-      DENOMS.forEach(d => {
-        state.register[d.key] = { count: 0, rolls: 0 };
-        state.custom[d.key]   = { count: null, rolls: null };
-      });
+      resetState();
       state.target = 300000;
       const r = document.querySelector('input[name="target"][value="300000"]');
       if (r) r.checked = true;
@@ -1037,6 +1034,16 @@
   }
 
   function init() {
+    elBarRegister = document.getElementById('bar-register');
+    elBarDeposit  = document.getElementById('bar-deposit');
+    elBarReserve  = document.getElementById('bar-reserve');
+    elRegTotal    = document.getElementById('register-total');
+    elDepTotal    = document.getElementById('deposit-total');
+    elResTotal    = document.getElementById('reserve-total');
+    elError       = document.getElementById('error');
+    elTablesGrid  = document.querySelector('.tables-grid');
+    elDepInfo     = document.getElementById('deposit-info');
+
     if (isTouch) {
       kbEl = document.getElementById('custom-kb');
       scrollEl = document.getElementById('scroll-container');
