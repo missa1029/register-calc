@@ -516,6 +516,21 @@
     font-size: 17px;
     font-weight: 600;
   }
+  .export-btn {
+    margin-left: auto;
+    padding: 7px 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .export-btn:active { background: var(--deposit-bg); }
   .confirm-body { padding: 0; }
   .confirm-empty {
     text-align: center;
@@ -677,6 +692,7 @@
   <div class="confirm-header">
     <button id="btn-back-confirm" class="nav-back">← 戻る</button>
     <h2>保存データ</h2>
+    <button id="export-btn" class="export-btn">CSVで書き出す</button>
   </div>
   <div class="confirm-body" id="confirm-list"></div>
 </div>
@@ -1198,6 +1214,52 @@
     showToast('保存しました　' + dateKey.replace(/-/g, '/'));
   }
 
+  function exportCSV() {
+    const history = loadHistory();
+    const dates = Object.keys(history).sort();
+    if (dates.length === 0) {
+      alert('保存データがありません');
+      return;
+    }
+
+    const header = ['日付', 'レジ金合計', '銀行入金合計', '翌日準備金合計'];
+    DENOMS.forEach(d => {
+      header.push('レジ金_' + d.label + '_枚数');
+      if (d.hasRoll) header.push('レジ金_' + d.label + '_棒金');
+      header.push('銀行入金_' + d.label + '_枚数');
+      if (d.hasRoll) header.push('銀行入金_' + d.label + '_棒金');
+    });
+
+    const rows = [header];
+    dates.forEach(dateKey => {
+      const rec = history[dateKey];
+      const row = [
+        dateKey.replace(/-/g, '/'),
+        rec.registerTotal,
+        rec.depositTotal,
+        rec.reserveTotal,
+      ];
+      DENOMS.forEach(d => {
+        const reg = rec.register[d.key] || { count: 0, rolls: 0 };
+        const dep = rec.deposit[d.key]  || { count: 0, rolls: 0 };
+        row.push(reg.count);
+        if (d.hasRoll) row.push(reg.rolls);
+        row.push(dep.count);
+        if (d.hasRoll) row.push(dep.rolls);
+      });
+      rows.push(row);
+    });
+
+    const csv = '﻿' + rows.map(r => r.join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '入金計算_' + todayKey() + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function showToast(msg) {
     const t = document.getElementById('toast');
     t.textContent = msg;
@@ -1477,6 +1539,7 @@
       showScreen('confirm');
     });
     document.getElementById('btn-back-confirm').addEventListener('click', () => showScreen('home'));
+    document.getElementById('export-btn').addEventListener('click', exportCSV);
     document.getElementById('btn-to-home').addEventListener('click', () => {
       if (activeInput) { hideKeyboard(); activeInput.blur(); }
       showScreen('home');
