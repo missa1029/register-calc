@@ -692,7 +692,7 @@
   <div class="confirm-header">
     <button id="btn-back-confirm" class="nav-back">← 戻る</button>
     <h2>保存データ</h2>
-    <button id="export-btn" class="export-btn">CSVで書き出す</button>
+    <button id="export-btn" class="export-btn">Excelで書き出す</button>
   </div>
   <div class="confirm-body" id="confirm-list"></div>
 </div>
@@ -1214,52 +1214,64 @@
     showToast('保存しました　' + dateKey.replace(/-/g, '/'));
   }
 
-  function exportCSV() {
+  function exportExcel() {
     const history = loadHistory();
-    const dates = Object.keys(history).sort();
+    const dates = Object.keys(history).sort().reverse();
     if (dates.length === 0) {
       alert('保存データがありません');
       return;
     }
 
-    const rows = [[
-      '日付', '種類',
-      'レジ金_枚数', 'レジ金_棒金',
-      '銀行入金_枚数', '銀行入金_棒金',
-      '翌日準備金_枚数', '翌日準備金_棒金',
-    ]];
+    const doExport = () => {
+      const wb = XLSX.utils.book_new();
 
-    dates.forEach(dateKey => {
-      const rec = history[dateKey];
-      const d = dateKey.replace(/-/g, '/');
+      dates.forEach(dateKey => {
+        const rec = history[dateKey];
+        const parts = dateKey.split('-');
+        const sheetName = parts[1] + '-' + parts[2]; // "05-30"
 
-      // 合計行
-      rows.push([d, '合計', rec.registerTotal, '', rec.depositTotal, '', rec.reserveTotal, '']);
+        const aoa = [
+          ['種類', 'レジ金', '',  '銀行入金', '',  '翌日準備金', ''],
+          ['',     '枚数',  '棒金', '枚数',  '棒金', '枚数',    '棒金'],
+        ];
 
-      // 金種別行
-      DENOMS.forEach(dn => {
-        const reg = rec.register[dn.key] || { count: 0, rolls: 0 };
-        const dep = rec.deposit[dn.key]  || { count: 0, rolls: 0 };
-        const res = rec.reserve[dn.key]  || { count: 0, rolls: 0 };
-        rows.push([
-          d, dn.label,
-          reg.count, dn.hasRoll ? reg.rolls : '―',
-          dep.count, dn.hasRoll ? dep.rolls : '―',
-          res.count, dn.hasRoll ? res.rolls : '―',
-        ]);
+        DENOMS.forEach(d => {
+          const reg = rec.register[d.key] || { count: 0, rolls: 0 };
+          const dep = rec.deposit[d.key]  || { count: 0, rolls: 0 };
+          const res = rec.reserve[d.key]  || { count: 0, rolls: 0 };
+          aoa.push([
+            d.label,
+            reg.count, d.hasRoll ? reg.rolls : '―',
+            dep.count, d.hasRoll ? dep.rolls : '―',
+            res.count, d.hasRoll ? res.rolls : '―',
+          ]);
+        });
+
+        aoa.push(['合計', rec.registerTotal, '', rec.depositTotal, '', rec.reserveTotal, '']);
+
+        const ws = XLSX.utils.aoa_to_sheet(aoa);
+        ws['!merges'] = [
+          { s: { r: 0, c: 1 }, e: { r: 0, c: 2 } },
+          { s: { r: 0, c: 3 }, e: { r: 0, c: 4 } },
+          { s: { r: 0, c: 5 }, e: { r: 0, c: 6 } },
+        ];
+
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
       });
 
-      rows.push([]); // 日付ごとに空行
-    });
+      XLSX.writeFile(wb, '入金計算_' + todayKey() + '.xlsx');
+    };
 
-    const csv = '﻿' + rows.map(r => r.join(',')).join('\r\n');
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = '入金計算_' + todayKey() + '.csv';
-    a.click();
-    URL.revokeObjectURL(url);
+    if (typeof XLSX === 'undefined') {
+      showToast('ライブラリを読み込み中...');
+      const s = document.createElement('script');
+      s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+      s.onload = doExport;
+      s.onerror = () => alert('読み込み失敗。インターネット接続を確認してください。');
+      document.head.appendChild(s);
+    } else {
+      doExport();
+    }
   }
 
   function showToast(msg) {
@@ -1541,7 +1553,7 @@
       showScreen('confirm');
     });
     document.getElementById('btn-back-confirm').addEventListener('click', () => showScreen('home'));
-    document.getElementById('export-btn').addEventListener('click', exportCSV);
+    document.getElementById('export-btn').addEventListener('click', exportExcel);
     document.getElementById('btn-to-home').addEventListener('click', () => {
       if (activeInput) { hideKeyboard(); activeInput.blur(); }
       showScreen('home');
