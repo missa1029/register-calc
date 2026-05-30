@@ -1,0 +1,18 @@
+{
+  "name": "入金計算",
+  "short_name": "入金計算",
+  "description": "レジ金の入金計算・振り分けアプリ",
+  "start_url": "./test.html",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#2563eb",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

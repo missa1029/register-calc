@@ -1,0 +1,1535 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2563eb">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="入金計算">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>入金計算</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #f3f4f6;
+    --bg-card: #ffffff;
+    --border: #d1d5db;
+    --text: #111827;
+    --text-sub: #6b7280;
+    --accent: #2563eb;
+    --error-bg: #fee2e2;
+    --error-text: #991b1b;
+    --header-bg: #f3f4f6;
+    --deposit-bg: #eff6ff;
+    --reserve-bg: #f0fdf4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f172a;
+      --bg-card: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --text-sub: #94a3b8;
+      --accent: #60a5fa;
+      --error-bg: #7f1d1d;
+      --error-text: #fecaca;
+      --header-bg: #334155;
+      --deposit-bg: #1e3a5f;
+      --reserve-bg: #1e3a2f;
+    }
+  }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Noto Sans JP', Meiryo, sans-serif;
+    font-size: 16px;
+    line-height: 1.4;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ===================== HOME SCREEN ===================== */
+  .screen-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 500;
+    background: var(--bg);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .home-wrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 16px;
+    padding: 40px 32px;
+    padding-top: max(60px, calc(40px + env(safe-area-inset-top)));
+    padding-bottom: calc(40px + env(safe-area-inset-bottom));
+  }
+  .home-title {
+    font-size: 26px;
+    font-weight: 700;
+    margin: 0 0 16px;
+    letter-spacing: 0.05em;
+  }
+  .home-btn {
+    width: 100%;
+    max-width: 320px;
+    height: 60px;
+    border-radius: 12px;
+    font-size: 18px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .home-btn:active { opacity: 0.8; }
+  .home-btn.secondary {
+    background: var(--bg-card);
+    color: var(--accent);
+  }
+
+  /* ===================== NAV BAR (入力 screen top) ===================== */
+  .sticky-top {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .nav-bar {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+    padding-top: calc(8px + env(safe-area-inset-top));
+    display: flex;
+    align-items: center;
+  }
+  .nav-back {
+    background: none;
+    border: none;
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    padding: 6px 0;
+    min-height: 36px;
+    white-space: nowrap;
+    touch-action: manipulation;
+  }
+
+  /* ===================== TOTALS BAR ===================== */
+  .totals-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .total-item {
+    background: var(--bg-card);
+    padding: 10px 6px;
+    text-align: center;
+    min-width: 0;
+  }
+  .total-item.deposit { background: var(--deposit-bg); }
+  .total-item.reserve { background: var(--reserve-bg); }
+  .total-item .label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-sub);
+    letter-spacing: 0.05em;
+  }
+  .total-item .value {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+    word-break: break-all;
+  }
+
+  .settings {
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+  .target-select {
+    display: flex;
+    gap: 4px;
+  }
+  .target-select label {
+    cursor: pointer;
+    padding: 8px 14px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-size: 14px;
+    background: var(--bg);
+    user-select: none;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .target-select input { display: none; }
+  .target-select input:checked + span { color: #fff; }
+  .target-select label:has(input:checked) {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  #reset-btn {
+    margin-left: auto;
+    padding: 0 16px;
+    height: 44px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    cursor: pointer;
+    font-size: 14px;
+  }
+  #reset-btn:active { background: var(--header-bg); }
+
+  #error {
+    margin: 10px 12px 0;
+    padding: 10px 12px;
+    background: var(--error-bg);
+    color: var(--error-text);
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 14px;
+  }
+  #error div + div { margin-top: 4px; }
+  .hidden { display: none !important; }
+
+  .custom-details {
+    margin: 10px 12px 0;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .custom-details summary {
+    padding: 12px;
+    cursor: pointer;
+    background: var(--header-bg);
+    user-select: none;
+    font-weight: 500;
+    font-size: 14px;
+    list-style: none;
+  }
+  .custom-details summary::-webkit-details-marker { display: none; }
+  .custom-details summary::before {
+    content: '▶ ';
+    font-size: 10px;
+    margin-right: 4px;
+    transition: transform 0.15s;
+    display: inline-block;
+  }
+  .custom-details[open] summary::before { transform: rotate(90deg); }
+  .custom-hint {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-sub);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .tables-grid {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 10px;
+    padding: 10px 12px 10px;
+  }
+  @media (max-width: 899px) {
+    .tables-grid { grid-template-columns: 1fr; gap: 8px; padding: 8px 8px 10px; }
+  }
+
+  .table-section {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .table-section.combined { border-color: var(--accent); }
+  .table-section h2 {
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 14px;
+    font-weight: 600;
+    background: var(--header-bg);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .table-section h2 .total {
+    font-variant-numeric: tabular-nums;
+    font-size: 15px;
+  }
+
+  .deposit-info {
+    padding: 5px 12px;
+    font-size: 12px;
+    color: var(--text-sub);
+    border-bottom: 1px solid var(--border);
+    background: var(--deposit-bg);
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .deposit-info .status-ok { color: #16a34a; font-weight: 700; }
+  .deposit-info .status-ng { color: var(--error-text); font-weight: 700; }
+
+  thead th.head-dep, thead th.head-res {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  thead th.head-dep { background: var(--deposit-bg); color: var(--accent); }
+  thead th.head-res { background: var(--reserve-bg); color: #16a34a; }
+  thead th.head-dep .total, thead th.head-res .total {
+    font-variant-numeric: tabular-nums;
+    font-size: 13px;
+    margin-left: 6px;
+    color: var(--text);
+  }
+  td.sep-col, th.sep-col { border-right: 2px solid var(--border); }
+
+  .tables-grid.has-error .table-section.combined { border-color: var(--error-text); }
+  .tables-grid.has-error thead th.head-dep,
+  .tables-grid.has-error thead th.head-res {
+    background: var(--error-bg);
+    color: var(--error-text);
+  }
+  .tables-grid.has-error .deposit-info {
+    background: var(--error-bg);
+    color: var(--error-text);
+  }
+  .tables-grid.has-error .deposit-info .status-ng { color: inherit; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  th, td {
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    text-align: right;
+    font-size: 14px;
+  }
+  th:first-child, td:first-child {
+    text-align: left;
+    white-space: nowrap;
+  }
+  thead th {
+    background: var(--header-bg);
+    font-weight: normal;
+    color: var(--text-sub);
+    font-size: 11px;
+    padding: 6px 8px;
+    text-align: center;
+  }
+  thead th:first-child { text-align: center; }
+
+  td.value-cell {
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    padding: 12px 8px;
+  }
+  td.no-roll { color: var(--text-sub); text-align: center; }
+  td.input-cell { padding: 4px; }
+
+  input.num-input {
+    width: 100%;
+    min-width: 50px;
+    padding: 12px 8px;
+    font-size: 16px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  input.num-input:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: -1px;
+    border-color: transparent;
+    background: var(--bg-card);
+  }
+  input.num-input::placeholder { color: var(--text-sub); opacity: 0.5; }
+
+  td.zero { color: var(--text-sub); }
+  td.custom-val { color: #dc2626; }
+  .table-section.combined tbody tr:nth-child(4) td { border-bottom: 2px solid var(--text-sub); }
+
+  @media (max-width: 899px) {
+    .total-item .value { font-size: 16px; }
+    .total-item .label { font-size: 10px; }
+    th, td { padding: 8px 6px; font-size: 14px; }
+    td.value-cell { padding: 14px 6px; }
+    input.num-input { padding: 14px 8px; font-size: 16px; }
+    .table-section h2 { padding: 12px; font-size: 15px; }
+    .table-section h2 .total { font-size: 16px; }
+  }
+  @media (max-width: 899px) {
+    .table-section.combined th,
+    .table-section.combined td { padding: 6px 4px; font-size: 13px; }
+    .table-section.combined td.value-cell { padding: 10px 4px; }
+  }
+  @media (min-width: 900px) {
+    .table-section.combined th:nth-child(1),
+    .table-section.combined td:nth-child(1) { width: 22%; }
+    .table-section.combined th:nth-child(2),
+    .table-section.combined td:nth-child(2) { width: 19%; }
+    .table-section.combined th:nth-child(3),
+    .table-section.combined td:nth-child(3) { width: 19%; }
+    .table-section.combined th:nth-child(4),
+    .table-section.combined td:nth-child(4) { width: 19%; }
+    .table-section.combined th:nth-child(5),
+    .table-section.combined td:nth-child(5) { width: 21%; }
+  }
+
+  /* ===================== SAVE BUTTON ===================== */
+  .save-area {
+    position: sticky;
+    bottom: 0;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    padding: 12px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  }
+  .save-btn {
+    width: 100%;
+    height: 52px;
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 17px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .save-btn:active { opacity: 0.85; }
+
+  /* ===================== TOAST ===================== */
+  .toast {
+    position: fixed;
+    bottom: 100px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #16a34a;
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 2000;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .toast.show { opacity: 1; }
+
+  /* ===================== CUSTOM KEYBOARD ===================== */
+  .custom-kb {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 200;
+    background: var(--bg-card);
+    border-top: 1px solid var(--border);
+    padding: 6px 6px env(safe-area-inset-bottom);
+    box-shadow: 0 -2px 12px rgba(0,0,0,0.15);
+  }
+  .kb-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 5px;
+  }
+  .kb-grid button {
+    height: 52px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text);
+    font-size: 20px;
+    font-weight: 500;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    touch-action: manipulation;
+  }
+  .kb-grid button:active { background: var(--header-bg); }
+  .kb-grid .kb-zero { grid-column: span 2; }
+  .kb-grid .kb-done { grid-column: span 2; background: var(--accent); color: #fff; border-color: var(--accent); font-size: 16px; }
+  .kb-grid .kb-done:active { opacity: 0.85; }
+  .kb-grid [data-action="bs"]  { font-size: 18px; font-weight: 700; }
+  .kb-grid [data-action="prev"],
+  .kb-grid [data-action="next"] { font-size: 20px; font-weight: 700; color: var(--accent); }
+
+  #scroll-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    background: var(--bg);
+  }
+
+  /* ===================== CONFIRM SCREEN ===================== */
+  .confirm-header {
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 12px;
+    padding-top: calc(14px + env(safe-area-inset-top));
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .confirm-header h2 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 600;
+  }
+  .confirm-body { padding: 0; }
+  .confirm-empty {
+    text-align: center;
+    color: var(--text-sub);
+    padding: 60px 24px;
+    font-size: 15px;
+  }
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .history-table th {
+    background: var(--header-bg);
+    font-size: 12px;
+    color: var(--text-sub);
+    font-weight: normal;
+    padding: 8px 10px;
+    text-align: right;
+    border: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+  .history-table th:first-child { text-align: left; }
+  .history-table td {
+    padding: 14px 10px;
+    border: 1px solid var(--border);
+    font-size: 14px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .history-table tbody tr { cursor: pointer; }
+  .history-table tbody tr:active { background: var(--header-bg); }
+  .date-cell {
+    text-align: left !important;
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* ===================== DETAIL MODAL (bottom sheet) ===================== */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 600;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: flex-end;
+  }
+  .modal-sheet {
+    background: var(--bg-card);
+    border-radius: 16px 16px 0 0;
+    width: 100%;
+    max-height: 85vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .modal-grip {
+    display: flex;
+    justify-content: center;
+    padding: 12px;
+    cursor: pointer;
+  }
+  .modal-grip::after {
+    content: '';
+    width: 40px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    display: block;
+  }
+  .modal-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 16px 12px;
+  }
+  .modal-title { font-size: 16px; font-weight: 700; margin: 0; }
+  .modal-close-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: var(--text-sub);
+    cursor: pointer;
+    padding: 4px 8px;
+    touch-action: manipulation;
+  }
+  .modal-body { padding: 0 12px 20px; }
+  .modal-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .ms-item {
+    background: var(--bg);
+    border-radius: 8px;
+    padding: 10px 6px;
+    text-align: center;
+  }
+  .ms-item.dep { background: var(--deposit-bg); }
+  .ms-item.res { background: var(--reserve-bg); }
+  .ms-label {
+    font-size: 11px;
+    color: var(--text-sub);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .ms-value {
+    font-size: 14px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    word-break: break-all;
+  }
+  .detail-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .detail-table th {
+    padding: 6px 4px;
+    border: 1px solid var(--border);
+    text-align: center;
+    font-size: 11px;
+    font-weight: normal;
+    color: var(--text-sub);
+    background: var(--header-bg);
+  }
+  .detail-table th.th-reg { background: var(--header-bg); color: var(--text-sub); }
+  .detail-table th.th-dep { background: var(--deposit-bg); color: var(--accent); }
+  .detail-table th.th-res { background: var(--reserve-bg); color: #16a34a; }
+  .detail-table th:first-child { text-align: left; }
+  .detail-table td {
+    padding: 10px 4px;
+    border: 1px solid var(--border);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+  .detail-table td:first-child { text-align: left; white-space: nowrap; padding-left: 8px; }
+  .detail-table td.no-roll-d { text-align: center; color: var(--text-sub); }
+  .detail-table td.sep { border-right: 2px solid var(--border); }
+  .detail-table tbody tr:nth-child(4) td { border-bottom: 2px solid var(--text-sub); }
+</style>
+</head>
+<body>
+
+<!-- ===== HOME SCREEN ===== -->
+<div id="screen-home" class="screen-overlay">
+  <div class="home-wrap">
+    <h1 class="home-title">入金計算</h1>
+    <button id="btn-to-input" class="home-btn">入力</button>
+    <button id="btn-to-confirm" class="home-btn secondary">確認</button>
+  </div>
+</div>
+
+<!-- ===== CONFIRM SCREEN ===== -->
+<div id="screen-confirm" class="screen-overlay hidden">
+  <div class="confirm-header">
+    <button id="btn-back-confirm" class="nav-back">← 戻る</button>
+    <h2>保存データ</h2>
+  </div>
+  <div class="confirm-body" id="confirm-list"></div>
+</div>
+
+<!-- ===== DETAIL MODAL ===== -->
+<div id="detail-modal" class="modal-backdrop hidden">
+  <div class="modal-sheet">
+    <div class="modal-grip" id="detail-grip"></div>
+    <div class="modal-title-row">
+      <p class="modal-title" id="detail-date-label"></p>
+      <button class="modal-close-btn" id="detail-close">✕</button>
+    </div>
+    <div class="modal-body" id="detail-content"></div>
+  </div>
+</div>
+
+<!-- ===== TOAST ===== -->
+<div id="toast" class="toast"></div>
+
+<!-- ===== INPUT SCREEN (always underneath) ===== -->
+<div id="scroll-container">
+  <div class="sticky-top">
+    <div class="nav-bar">
+      <button id="btn-to-home" class="nav-back">← ホーム</button>
+    </div>
+    <div class="totals-bar">
+      <div class="total-item">
+        <span class="label">レジ金</span>
+        <span class="value" id="bar-register">¥0</span>
+      </div>
+      <div class="total-item deposit">
+        <span class="label">銀行入金</span>
+        <span class="value" id="bar-deposit">¥0</span>
+      </div>
+      <div class="total-item reserve">
+        <span class="label">翌日準備金</span>
+        <span class="value" id="bar-reserve">¥0</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings">
+    <span style="font-size:13px;color:var(--text-sub);">翌日準備金</span>
+    <div class="target-select">
+      <label><input type="radio" name="target" value="300000" checked><span>30万</span></label>
+      <label><input type="radio" name="target" value="290000"><span>29万</span></label>
+    </div>
+    <button id="reset-btn" type="button">リセット</button>
+  </div>
+
+  <div id="error" class="hidden"></div>
+
+  <details class="custom-details">
+    <summary>カスタム指示（銀行入金）</summary>
+    <div class="custom-hint">空欄は自動振り分け。値を入れた金種は指定枚数/本数を入金に確定します。</div>
+    <table>
+      <thead>
+        <tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr>
+      </thead>
+      <tbody id="custom-body"></tbody>
+    </table>
+  </details>
+
+  <div class="tables-grid">
+    <section class="table-section">
+      <h2>レジ金（入力）<span class="total" id="register-total">¥0</span></h2>
+      <table>
+        <thead>
+          <tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr>
+        </thead>
+        <tbody id="register-body"></tbody>
+      </table>
+    </section>
+
+    <section class="table-section combined">
+      <div class="deposit-info" id="deposit-info"></div>
+      <table>
+        <thead>
+          <tr>
+            <th rowspan="2">種類</th>
+            <th colspan="2" class="head-dep">銀行入金<span class="total" id="deposit-total">¥0</span></th>
+            <th colspan="2" class="head-res">翌日準備金<span class="total" id="reserve-total">¥0</span></th>
+          </tr>
+          <tr>
+            <th>枚数</th><th class="sep-col">棒金</th>
+            <th>枚数</th><th>棒金</th>
+          </tr>
+        </thead>
+        <tbody id="result-body"></tbody>
+      </table>
+    </section>
+  </div>
+
+  <div class="save-area">
+    <button id="save-btn" class="save-btn">この日のデータを保存</button>
+  </div>
+</div><!-- /scroll-container -->
+
+<div id="custom-kb" class="custom-kb hidden">
+  <div class="kb-grid">
+    <button data-n="1">1</button>
+    <button data-n="2">2</button>
+    <button data-n="3">3</button>
+    <button data-action="bs">⌫</button>
+    <button data-n="4">4</button>
+    <button data-n="5">5</button>
+    <button data-n="6">6</button>
+    <button data-action="prev">←</button>
+    <button data-n="7">7</button>
+    <button data-n="8">8</button>
+    <button data-n="9">9</button>
+    <button data-action="next">→</button>
+    <button data-n="0" class="kb-zero">0</button>
+    <button data-action="done" class="kb-done">確定</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  const DENOMS = [
+    { key: '10000', label: '10000円', value: 10000, hasRoll: false, depositable: true,  allIn: false },
+    { key: '5000',  label: '5000円',  value: 5000,  hasRoll: false, depositable: false, allIn: false },
+    { key: '2000',  label: '2000円',  value: 2000,  hasRoll: false, depositable: true,  allIn: false },
+    { key: '1000',  label: '1000円',  value: 1000,  hasRoll: false, depositable: true,  allIn: false },
+    { key: '500',   label: '500円',   value: 500,   hasRoll: true,  depositable: false, allIn: false },
+    { key: '100',   label: '100円',   value: 100,   hasRoll: true,  depositable: true,  allIn: false },
+    { key: '50',    label: '50円',    value: 50,    hasRoll: true,  depositable: true,  allIn: false },
+    { key: '10',    label: '10円',    value: 10,    hasRoll: true,  depositable: true,  allIn: false },
+    { key: '5',     label: '5円',     value: 5,     hasRoll: true,  depositable: true,  allIn: true  },
+    { key: '1',     label: '1円',     value: 1,     hasRoll: true,  depositable: true,  allIn: true  },
+  ];
+  const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const ROLL_COUNT = 50;
+  const BILLS_PRIMARY  = ['10000', '2000', '1000'];
+  const BILLS_FALLBACK = ['5000'];
+  const COINS_ORDER    = ['500', '100', '50', '10'];
+  const RESERVED_1000_COUNT = 30;
+  const STORAGE_KEY   = 'nyukin_keisan_v1';
+  const HISTORY_KEY   = 'nyukin_history_v1';
+
+  const DENOM_MAP = new Map(DENOMS.map(d => [d.key, d]));
+
+  const state = {
+    target: 300000,
+    register: {},
+    custom: {},
+  };
+
+  function resetState() {
+    DENOMS.forEach(d => {
+      state.register[d.key] = { count: 0, rolls: 0 };
+      state.custom[d.key]   = { count: null, rolls: null };
+    });
+  }
+  resetState();
+
+  function denomOf(key) { return DENOM_MAP.get(key); }
+
+  function totalOf(stockMap) {
+    let total = 0;
+    DENOMS.forEach(d => {
+      const s = stockMap[d.key];
+      if (!s) return;
+      total += (s.count || 0) * d.value;
+      if (d.hasRoll) total += (s.rolls || 0) * ROLL_COUNT * d.value;
+    });
+    return total;
+  }
+
+  function formatYen(n) {
+    const sign = n < 0 ? '-' : '';
+    return sign + '¥' + Math.abs(n).toLocaleString('ja-JP');
+  }
+
+  function verifyIntegrity(deposit, reserve) {
+    const errs = [];
+    DENOMS.forEach(d => {
+      const r = state.register[d.key];
+      const dp = deposit[d.key];
+      const rs = reserve[d.key];
+      if (dp.count + rs.count !== r.count) {
+        errs.push('【整合性エラー】' + d.label + ': 入金' + dp.count + '枚 + 準備金' + rs.count + '枚 ≠ レジ金' + r.count + '枚');
+      }
+      if (rs.count < 0) {
+        errs.push('【整合性エラー】' + d.label + ': 翌日準備金の枚数が負（' + rs.count + '枚）');
+      }
+      if (d.hasRoll) {
+        if (dp.rolls + rs.rolls !== r.rolls) {
+          errs.push('【整合性エラー】' + d.label + '棒金: 入金' + dp.rolls + '本 + 準備金' + rs.rolls + '本 ≠ レジ金' + r.rolls + '本');
+        }
+        if (rs.rolls < 0) {
+          errs.push('【整合性エラー】' + d.label + '棒金: 翌日準備金の本数が負（' + rs.rolls + '本）');
+        }
+      }
+    });
+    const tReg = totalOf(state.register);
+    const tDep = totalOf(deposit);
+    const tRes = totalOf(reserve);
+    if (tReg !== tDep + tRes) {
+      errs.push('【整合性エラー】合計金額が不一致（レジ金' + formatYen(tReg) + ' ≠ 銀行入金' + formatYen(tDep) + ' + 翌日準備金' + formatYen(tRes) + '）');
+    }
+    return errs;
+  }
+
+  function fillDenoms(keys, amount, deposit) {
+    let remaining = amount;
+    for (const k of keys) {
+      if (remaining <= 0) break;
+      if (state.custom[k].count !== null) continue;
+      const d = denomOf(k);
+      let available = state.register[k].count;
+      if (k === '1000') available = Math.max(0, available - RESERVED_1000_COUNT);
+      const add = Math.min(available, Math.floor(remaining / d.value));
+      deposit[k].count = add;
+      remaining -= add * d.value;
+    }
+    return remaining;
+  }
+
+  function calculate() {
+    const errors = [];
+    const deposit = {};
+    DENOMS.forEach(d => { deposit[d.key] = { count: 0, rolls: 0 }; });
+
+    const registerTotal = totalOf(state.register);
+    const reserveTarget = state.target;
+    const depositTarget = registerTotal - reserveTarget;
+
+    if (depositTarget < 0) {
+      errors.push('レジ金（' + formatYen(registerTotal) + '）が不足しています');
+    } else {
+      DENOMS.forEach(d => {
+        const c = state.custom[d.key];
+        const r = state.register[d.key];
+        if (c.count !== null) {
+          if (c.count > r.count) {
+            errors.push(d.label + 'のカスタム枚数（' + c.count + '）が在庫（' + r.count + '）を超えています');
+            deposit[d.key].count = r.count;
+          } else {
+            deposit[d.key].count = c.count;
+          }
+        }
+        if (d.hasRoll && c.rolls !== null) {
+          if (c.rolls > r.rolls) {
+            errors.push(d.label + 'のカスタム棒金（' + c.rolls + '本）が在庫（' + r.rolls + '本）を超えています');
+            deposit[d.key].rolls = r.rolls;
+          } else {
+            deposit[d.key].rolls = c.rolls;
+          }
+        }
+      });
+
+      DENOMS.filter(d => d.allIn).forEach(d => {
+        if (state.custom[d.key].count === null) {
+          deposit[d.key].count = state.register[d.key].count;
+        }
+      });
+
+      let depositTotal = totalOf(deposit);
+
+      if (depositTotal > depositTarget) {
+        errors.push('カスタム指示で銀行入金額（' + formatYen(depositTarget) + '）を超えています（超過: ' + formatYen(depositTotal - depositTarget) + '）');
+      } else {
+        let remaining = depositTarget - depositTotal;
+        const billsTarget = Math.floor(remaining / 1000) * 1000;
+        const coinsTarget = remaining % 1000;
+
+        let billsRemaining = fillDenoms(BILLS_PRIMARY, billsTarget, deposit);
+        billsRemaining = fillDenoms(BILLS_FALLBACK, billsRemaining, deposit);
+
+        if (billsRemaining >= 1000 && state.custom['5000'].count === null &&
+            deposit['5000'].count < state.register['5000'].count) {
+          const overshoot = 5000 - billsRemaining;
+          const take1000 = state.custom['1000'].count === null
+            ? Math.min(deposit['1000'].count, Math.floor(overshoot / 1000)) : 0;
+          const rem = overshoot - take1000 * 1000;
+          const take2000 = (rem > 0 && state.custom['2000'].count === null)
+            ? Math.min(deposit['2000'].count, Math.floor(rem / 2000)) : 0;
+          if (take1000 * 1000 + take2000 * 2000 === overshoot) {
+            deposit['5000'].count += 1;
+            deposit['1000'].count -= take1000;
+            deposit['2000'].count -= take2000;
+            billsRemaining = 0;
+          }
+        }
+
+        remaining = fillDenoms(COINS_ORDER, coinsTarget + billsRemaining, deposit);
+
+        if (remaining > 0) {
+          errors.push('銀行入金（' + formatYen(depositTarget) + '）に充てられる金種が不足しています（不足: ' + formatYen(remaining) + '）');
+        }
+      }
+    }
+
+    const reserve = {};
+    DENOMS.forEach(d => {
+      reserve[d.key] = {
+        count: state.register[d.key].count - deposit[d.key].count,
+        rolls: state.register[d.key].rolls - deposit[d.key].rolls,
+      };
+    });
+
+    const integrityErrors = verifyIntegrity(deposit, reserve);
+    if (integrityErrors.length > 0) {
+      errors.unshift.apply(errors, integrityErrors);
+    }
+
+    return { deposit, reserve, errors, depositTarget, registerTotal };
+  }
+
+  function buildInputBody(tbodyId, type) {
+    const tbody = document.getElementById(tbodyId);
+    tbody.innerHTML = '';
+    DENOMS.forEach(d => {
+      const tr = document.createElement('tr');
+      const tdLabel = document.createElement('td');
+      tdLabel.textContent = d.label;
+      tr.appendChild(tdLabel);
+
+      const tdCount = document.createElement('td');
+      tdCount.className = 'input-cell';
+      tdCount.appendChild(makeInput(d, 'count', type));
+      tr.appendChild(tdCount);
+
+      const tdRolls = document.createElement('td');
+      if (d.hasRoll) {
+        tdRolls.className = 'input-cell';
+        tdRolls.appendChild(makeInput(d, 'rolls', type));
+      } else {
+        tdRolls.className = 'no-roll';
+        tdRolls.textContent = '―';
+      }
+      tr.appendChild(tdRolls);
+      tbody.appendChild(tr);
+    });
+  }
+
+  function makeInput(d, field, type) {
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.inputMode = isTouch ? 'none' : 'numeric';
+    inp.pattern = '[0-9]*';
+    inp.autocomplete = 'off';
+    inp.className = 'num-input ' + type + '-input';
+    inp.dataset.key = d.key;
+    inp.dataset.field = field;
+    if (type === 'register') {
+      const v = state.register[d.key][field];
+      inp.value = v ? String(v) : '';
+    } else {
+      const v = state.custom[d.key][field];
+      inp.value = v !== null ? String(v) : '';
+      inp.placeholder = '自動';
+    }
+    return inp;
+  }
+
+  function buildResultBody() {
+    const tbody = document.getElementById('result-body');
+    tbody.innerHTML = '';
+    DENOMS.forEach(d => {
+      const tr = document.createElement('tr');
+      const tdLabel = document.createElement('td');
+      tdLabel.textContent = d.label;
+      tr.appendChild(tdLabel);
+
+      ['deposit', 'reserve'].forEach(scope => {
+        const sep = scope === 'deposit' ? ' sep-col' : '';
+        const tdCount = document.createElement('td');
+        tdCount.className = 'value-cell';
+        tdCount.textContent = '0';
+        resultCells[scope + ':' + d.key + ':count'] = tdCount;
+        tr.appendChild(tdCount);
+
+        const tdRolls = document.createElement('td');
+        if (d.hasRoll) {
+          tdRolls.className = 'value-cell' + sep;
+          tdRolls.textContent = '0';
+          resultCells[scope + ':' + d.key + ':rolls'] = tdRolls;
+        } else {
+          tdRolls.className = 'no-roll' + sep;
+          tdRolls.textContent = '―';
+        }
+        tr.appendChild(tdRolls);
+      });
+
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updateResultTable(scope, stockMap) {
+    DENOMS.forEach(d => {
+      for (const field of ['count', 'rolls']) {
+        const cell = resultCells[scope + ':' + d.key + ':' + field];
+        if (!cell) continue;
+        const v = stockMap[d.key][field] || 0;
+        cell.textContent = v;
+        cell.classList.toggle('zero', v === 0);
+        cell.classList.toggle('custom-val', scope === 'deposit' && state.custom[d.key][field] !== null);
+      }
+    });
+  }
+
+  function updateDepositInfo(depositTarget, actual, errors) {
+    const el = elDepInfo;
+    if (!el) return;
+    if (errors.length > 0) {
+      el.innerHTML = '<span class="status-ng">✗ エラーのため計算できません</span>';
+      return;
+    }
+    const matched = depositTarget === actual;
+    el.innerHTML =
+      '目標: ' + formatYen(depositTarget) +
+      '　実績: ' + formatYen(actual) +
+      '　<span class="' + (matched ? 'status-ok' : 'status-ng') + '">' +
+      (matched ? '✓' : '✗') + '</span>';
+  }
+
+  function update() {
+    const { deposit, reserve, errors, depositTarget, registerTotal } = calculate();
+
+    updateResultTable('deposit', deposit);
+    updateResultTable('reserve', reserve);
+
+    const tDep = totalOf(deposit);
+    const tRes = totalOf(reserve);
+
+    elBarRegister.textContent = elRegTotal.textContent = formatYen(registerTotal);
+    elBarDeposit.textContent  = elDepTotal.textContent = formatYen(tDep);
+    elBarReserve.textContent  = elResTotal.textContent = formatYen(tRes);
+
+    elTablesGrid.classList.toggle('has-error', errors.length > 0);
+    updateDepositInfo(depositTarget, tDep, errors);
+
+    if (errors.length) {
+      elError.innerHTML = errors.map(e => '<div>⚠ ' + escapeHtml(e) + '</div>').join('');
+      elError.classList.remove('hidden');
+    } else {
+      elError.classList.add('hidden');
+    }
+  }
+
+  function escapeHtml(s) {
+    return s.replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({
+        target: state.target,
+        register: state.register,
+        custom: state.custom,
+      }));
+    } catch (e) {}
+  }
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (typeof data.target === 'number') state.target = data.target;
+      if (data.register) {
+        DENOMS.forEach(d => {
+          if (data.register[d.key]) {
+            state.register[d.key].count = Number(data.register[d.key].count) || 0;
+            state.register[d.key].rolls = Number(data.register[d.key].rolls) || 0;
+          }
+        });
+      }
+      if (data.custom) {
+        DENOMS.forEach(d => {
+          if (data.custom[d.key]) {
+            const c = data.custom[d.key].count;
+            const r = data.custom[d.key].rolls;
+            state.custom[d.key].count = (c == null || c === '') ? null : Number(c);
+            state.custom[d.key].rolls = (r == null || r === '') ? null : Number(r);
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  // ===== HISTORY =====
+  function loadHistory() {
+    try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || {}; }
+    catch(e) { return {}; }
+  }
+
+  function saveHistoryData(history) {
+    try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
+    catch(e) {}
+  }
+
+  function todayKey() {
+    const d = new Date();
+    return d.getFullYear() + '-' +
+      String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  function saveRecord() {
+    const { deposit, reserve } = calculate();
+    const dateKey = todayKey();
+    const history = loadHistory();
+    history[dateKey] = {
+      date: dateKey,
+      register: JSON.parse(JSON.stringify(state.register)),
+      deposit:  JSON.parse(JSON.stringify(deposit)),
+      reserve:  JSON.parse(JSON.stringify(reserve)),
+      registerTotal: totalOf(state.register),
+      depositTotal:  totalOf(deposit),
+      reserveTotal:  totalOf(reserve),
+      target: state.target,
+    };
+    saveHistoryData(history);
+    showToast('保存しました　' + dateKey.replace(/-/g, '/'));
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(showToast._timer);
+    showToast._timer = setTimeout(() => t.classList.remove('show'), 2200);
+  }
+
+  // ===== SCREEN NAVIGATION =====
+  function showScreen(name) {
+    document.getElementById('screen-home').classList.toggle('hidden', name !== 'home');
+    document.getElementById('screen-confirm').classList.toggle('hidden', name !== 'confirm');
+  }
+
+  // ===== CONFIRM SCREEN =====
+  function buildConfirmList() {
+    const container = document.getElementById('confirm-list');
+    const history = loadHistory();
+    const dates = Object.keys(history).sort().reverse();
+
+    if (dates.length === 0) {
+      container.innerHTML = '<div class="confirm-empty">保存データがありません</div>';
+      return;
+    }
+
+    const table = document.createElement('table');
+    table.className = 'history-table';
+    const thead = document.createElement('thead');
+    thead.innerHTML = '<tr><th>日付</th><th>レジ金</th><th>銀行入金</th><th>翌日準備金</th></tr>';
+    table.appendChild(thead);
+
+    const tbody = document.createElement('tbody');
+    dates.forEach(dateKey => {
+      const rec = history[dateKey];
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td class="date-cell">' + dateKey.replace(/-/g, '/') + '</td>' +
+        '<td>' + formatYen(rec.registerTotal) + '</td>' +
+        '<td>' + formatYen(rec.depositTotal)  + '</td>' +
+        '<td>' + formatYen(rec.reserveTotal)  + '</td>';
+      tr.addEventListener('click', () => showDetail(dateKey));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+
+    container.innerHTML = '';
+    container.appendChild(table);
+  }
+
+  // ===== DETAIL MODAL =====
+  function showDetail(dateKey) {
+    const rec = loadHistory()[dateKey];
+    if (!rec) return;
+
+    document.getElementById('detail-date-label').textContent = dateKey.replace(/-/g, '/');
+
+    const content = document.getElementById('detail-content');
+
+    let html =
+      '<div class="modal-summary">' +
+        '<div class="ms-item"><span class="ms-label">レジ金</span><span class="ms-value">' + formatYen(rec.registerTotal) + '</span></div>' +
+        '<div class="ms-item dep"><span class="ms-label">銀行入金</span><span class="ms-value">' + formatYen(rec.depositTotal) + '</span></div>' +
+        '<div class="ms-item res"><span class="ms-label">翌日準備金</span><span class="ms-value">' + formatYen(rec.reserveTotal) + '</span></div>' +
+      '</div>' +
+      '<table class="detail-table">' +
+        '<thead>' +
+          '<tr>' +
+            '<th rowspan="2">種類</th>' +
+            '<th colspan="2" class="th-reg">レジ金</th>' +
+            '<th colspan="2" class="th-dep">銀行入金</th>' +
+            '<th colspan="2" class="th-res">翌日準備金</th>' +
+          '</tr>' +
+          '<tr>' +
+            '<th class="th-reg">枚数</th><th class="th-reg">棒金</th>' +
+            '<th class="th-dep">枚数</th><th class="th-dep">棒金</th>' +
+            '<th class="th-res">枚数</th><th class="th-res">棒金</th>' +
+          '</tr>' +
+        '</thead>' +
+        '<tbody>';
+
+    DENOMS.forEach(d => {
+      const reg = rec.register[d.key] || { count: 0, rolls: 0 };
+      const dep = rec.deposit[d.key]  || { count: 0, rolls: 0 };
+      const res = rec.reserve[d.key]  || { count: 0, rolls: 0 };
+      html +=
+        '<tr>' +
+          '<td>' + d.label + '</td>' +
+          '<td>' + reg.count + '</td>' +
+          '<td class="' + (d.hasRoll ? 'sep' : 'no-roll-d sep') + '">' + (d.hasRoll ? reg.rolls : '―') + '</td>' +
+          '<td>' + dep.count + '</td>' +
+          '<td class="' + (d.hasRoll ? 'sep' : 'no-roll-d sep') + '">' + (d.hasRoll ? dep.rolls : '―') + '</td>' +
+          '<td>' + res.count + '</td>' +
+          '<td class="' + (d.hasRoll ? '' : 'no-roll-d') + '">' + (d.hasRoll ? res.rolls : '―') + '</td>' +
+        '</tr>';
+    });
+
+    html += '</tbody></table>';
+    content.innerHTML = html;
+
+    document.getElementById('detail-modal').classList.remove('hidden');
+  }
+
+  function hideDetail() {
+    document.getElementById('detail-modal').classList.add('hidden');
+  }
+
+  // ===== DOM CACHE =====
+  let activeInput = null;
+  let kbEl, scrollEl, kbHeight, hideTimer;
+  let elBarRegister, elBarDeposit, elBarReserve;
+  let elRegTotal, elDepTotal, elResTotal;
+  let elError, elTablesGrid, elDepInfo;
+  const resultCells = {};
+
+  function getVisibleInputs() {
+    return Array.from(document.querySelectorAll('input.register-input, input.custom-input'))
+      .filter(i => i.offsetParent !== null);
+  }
+
+  function scrollToInput(el) {
+    if (!scrollEl) return;
+    requestAnimationFrame(() => {
+      const visibleHeight = window.innerHeight - kbHeight;
+      const rect = el.getBoundingClientRect();
+      const offsetFromTop = rect.top + scrollEl.scrollTop;
+      const target = offsetFromTop - visibleHeight / 2 + rect.height / 2;
+      scrollEl.scrollTop = Math.max(0, target);
+    });
+  }
+
+  function navigateInput(dir) {
+    const inputs = getVisibleInputs();
+    const idx = inputs.indexOf(activeInput);
+    const next = inputs[idx + dir];
+    if (next) {
+      next.focus();
+      scrollToInput(next);
+    } else if (dir > 0) {
+      activeInput.blur();
+      hideKeyboard();
+    }
+  }
+
+  function showKeyboard() {
+    kbEl.classList.remove('hidden');
+    scrollEl.style.bottom = kbHeight + 'px';
+    if (activeInput) scrollToInput(activeInput);
+  }
+
+  function hideKeyboard() {
+    kbEl.classList.add('hidden');
+    scrollEl.style.bottom = '0';
+    activeInput = null;
+  }
+
+  function triggerInput(el) {
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function bindInputEvents() {
+    document.addEventListener('input', (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement)) return;
+      if (!t.classList.contains('register-input') && !t.classList.contains('custom-input')) return;
+
+      const normalized = t.value.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
+      const filtered = normalized.replace(/[^0-9]/g, '');
+      if (t.value !== filtered) t.value = filtered;
+
+      const key = t.dataset.key;
+      const field = t.dataset.field;
+      if (t.classList.contains('register-input')) {
+        state.register[key][field] = filtered === '' ? 0 : parseInt(filtered, 10);
+      } else {
+        state.custom[key][field] = filtered === '' ? null : parseInt(filtered, 10);
+      }
+      save();
+      update();
+    });
+
+    document.addEventListener('focusin', (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement) || !t.classList.contains('num-input')) return;
+      t.dataset.fresh = 'true';
+      if (navigator.maxTouchPoints > 0 || 'ontouchstart' in window) {
+        clearTimeout(hideTimer);
+        activeInput = t;
+        showKeyboard();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement) || !t.classList.contains('num-input')) return;
+      if (t.dataset.fresh === 'true' && e.key >= '0' && e.key <= '9') {
+        t.value = '';
+        t.dataset.fresh = 'false';
+      }
+      if (e.key === 'Enter' &&
+          (t.classList.contains('register-input') || t.classList.contains('custom-input'))) {
+        e.preventDefault();
+        const inputs = getVisibleInputs();
+        const idx = inputs.indexOf(t);
+        if (idx >= 0 && idx < inputs.length - 1) {
+          const next = inputs[idx + 1];
+          next.focus();
+          next.select();
+        } else {
+          t.blur();
+        }
+      }
+    });
+
+    document.addEventListener('focusout', (e) => {
+      if (!(navigator.maxTouchPoints > 0 || 'ontouchstart' in window)) return;
+      const t = e.target;
+      if (!(t instanceof HTMLInputElement) || !t.classList.contains('num-input')) return;
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => { if (document.activeElement === document.body) hideKeyboard(); }, 100);
+    });
+
+    kbEl.addEventListener('mousedown', e => e.preventDefault());
+    kbEl.addEventListener('pointerdown', e => e.preventDefault());
+    kbEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn || !activeInput) return;
+        if (btn.dataset.n !== undefined) {
+          if (activeInput.dataset.fresh === 'true') {
+            activeInput.value = '';
+            activeInput.dataset.fresh = 'false';
+          }
+          activeInput.value += btn.dataset.n;
+          triggerInput(activeInput);
+        } else if (btn.dataset.action === 'bs') {
+          activeInput.value = activeInput.value.slice(0, -1);
+          triggerInput(activeInput);
+        } else if (btn.dataset.action === 'prev') {
+          navigateInput(-1);
+        } else if (btn.dataset.action === 'next') {
+          navigateInput(1);
+        } else if (btn.dataset.action === 'done') {
+          const inp = activeInput;
+          hideKeyboard();
+          inp.blur();
+        }
+      });
+  }
+
+  function bindControls() {
+    document.querySelectorAll('input[name="target"]').forEach(r => {
+      r.addEventListener('change', () => {
+        const checked = document.querySelector('input[name="target"]:checked');
+        if (checked) {
+          state.target = parseInt(checked.value, 10);
+          save();
+          update();
+        }
+      });
+    });
+
+    document.getElementById('reset-btn').addEventListener('click', () => {
+      if (!confirm('全ての入力をリセットしますか？')) return;
+      resetState();
+      state.target = 300000;
+      const r = document.querySelector('input[name="target"][value="300000"]');
+      if (r) r.checked = true;
+      save();
+      buildInputBody('register-body', 'register');
+      buildInputBody('custom-body', 'custom');
+      update();
+    });
+
+    // Screen navigation
+    document.getElementById('btn-to-input').addEventListener('click', () => showScreen('input'));
+    document.getElementById('btn-to-confirm').addEventListener('click', () => {
+      buildConfirmList();
+      showScreen('confirm');
+    });
+    document.getElementById('btn-back-confirm').addEventListener('click', () => showScreen('home'));
+    document.getElementById('btn-to-home').addEventListener('click', () => {
+      if (activeInput) { hideKeyboard(); activeInput.blur(); }
+      showScreen('home');
+    });
+
+    // Save
+    document.getElementById('save-btn').addEventListener('click', saveRecord);
+
+    // Detail modal
+    document.getElementById('detail-close').addEventListener('click', hideDetail);
+    document.getElementById('detail-grip').addEventListener('click', hideDetail);
+    document.getElementById('detail-modal').addEventListener('click', e => {
+      if (e.target === document.getElementById('detail-modal')) hideDetail();
+    });
+  }
+
+  function init() {
+    elBarRegister = document.getElementById('bar-register');
+    elBarDeposit  = document.getElementById('bar-deposit');
+    elBarReserve  = document.getElementById('bar-reserve');
+    elRegTotal    = document.getElementById('register-total');
+    elDepTotal    = document.getElementById('deposit-total');
+    elResTotal    = document.getElementById('reserve-total');
+    elError       = document.getElementById('error');
+    elTablesGrid  = document.querySelector('.tables-grid');
+    elDepInfo     = document.getElementById('deposit-info');
+
+    kbEl = document.getElementById('custom-kb');
+    scrollEl = document.getElementById('scroll-container');
+    kbEl.classList.remove('hidden');
+    kbHeight = kbEl.offsetHeight;
+    kbEl.classList.add('hidden');
+    load();
+    const r = document.querySelector('input[name="target"][value="' + state.target + '"]');
+    if (r) r.checked = true;
+    buildInputBody('register-body', 'register');
+    buildInputBody('custom-body', 'custom');
+    buildResultBody();
+    bindInputEvents();
+    bindControls();
+    update();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js');
+}
+</script>
+</body>
+</html>
