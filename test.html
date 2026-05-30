@@ -412,46 +412,41 @@
     color: var(--text);
   }
 
-  /* ===================== MANUAL INPUT FORM ===================== */
-  .manual-form {
-    padding: 16px 12px 0;
+  /* ===================== MANUAL DATE ROW ===================== */
+  .manual-date-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+  }
+  .manual-date-label {
+    font-size: 13px;
+    color: var(--text-sub);
+    white-space: nowrap;
+  }
+  .manual-date-input {
+    flex: 1;
+    padding: 8px 10px;
+    font-size: 15px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  /* ===================== MANUAL TABLES ===================== */
+  .manual-tables {
+    padding: 8px 8px 0;
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 8px;
   }
-  .form-group {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    overflow: hidden;
-  }
-  .form-group.deposit-group { border-color: var(--accent); }
-  .form-group.reserve-group { border-color: #16a34a; }
-  .form-label {
-    display: block;
-    padding: 10px 14px 4px;
-    font-size: 12px;
-    color: var(--text-sub);
-  }
-  .form-input {
-    width: 100%;
-    padding: 4px 14px 14px;
-    font-size: 28px;
-    font-weight: 700;
-    border: none;
-    background: transparent;
-    color: var(--text);
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  .form-input:focus { outline: none; }
-  .form-input.date-input {
-    font-size: 18px;
-    font-weight: 500;
-    text-align: left;
-  }
+  .table-section.deposit-section { border-color: var(--accent); }
+  .table-section.reserve-section { border-color: #16a34a; }
+  .table-section.deposit-section h2 { background: var(--deposit-bg); color: var(--accent); }
+  .table-section.reserve-section h2 { background: var(--reserve-bg); color: #16a34a; }
 
   /* ===================== SAVE BUTTON ===================== */
   .save-area {
@@ -743,25 +738,51 @@
       <button id="btn-manual-home" class="nav-back">← ホーム</button>
       <span class="nav-title">手動入力</span>
     </div>
-  </div>
-  <div class="manual-form">
-    <div class="form-group">
-      <span class="form-label">日付</span>
-      <input type="date" id="manual-date" class="form-input date-input">
-    </div>
-    <div class="form-group">
-      <span class="form-label">レジ金合計</span>
-      <input type="number" id="manual-register" class="form-input" placeholder="0" min="0">
-    </div>
-    <div class="form-group deposit-group">
-      <span class="form-label">銀行入金合計</span>
-      <input type="number" id="manual-deposit" class="form-input" placeholder="0" min="0">
-    </div>
-    <div class="form-group reserve-group">
-      <span class="form-label">翌日準備金合計</span>
-      <input type="number" id="manual-reserve" class="form-input" placeholder="0" min="0">
+    <div class="totals-bar">
+      <div class="total-item">
+        <span class="label">レジ金</span>
+        <span class="value" id="manual-bar-register">¥0</span>
+      </div>
+      <div class="total-item deposit">
+        <span class="label">銀行入金</span>
+        <span class="value" id="manual-bar-deposit">¥0</span>
+      </div>
+      <div class="total-item reserve">
+        <span class="label">翌日準備金</span>
+        <span class="value" id="manual-bar-reserve">¥0</span>
+      </div>
     </div>
   </div>
+
+  <div class="manual-date-wrap">
+    <label class="manual-date-label" for="manual-date">日付</label>
+    <input type="date" id="manual-date" class="manual-date-input">
+  </div>
+
+  <div class="manual-tables">
+    <section class="table-section">
+      <h2>レジ金（入力）<span class="total" id="manual-reg-total">¥0</span></h2>
+      <table>
+        <thead><tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr></thead>
+        <tbody id="manual-register-body"></tbody>
+      </table>
+    </section>
+    <section class="table-section deposit-section">
+      <h2>銀行入金（入力）<span class="total" id="manual-dep-total">¥0</span></h2>
+      <table>
+        <thead><tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr></thead>
+        <tbody id="manual-deposit-body"></tbody>
+      </table>
+    </section>
+    <section class="table-section reserve-section">
+      <h2>翌日準備金（入力）<span class="total" id="manual-res-total">¥0</span></h2>
+      <table>
+        <thead><tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr></thead>
+        <tbody id="manual-reserve-body"></tbody>
+      </table>
+    </section>
+  </div>
+
   <div class="save-area">
     <button id="manual-save-btn" class="save-btn">保存</button>
   </div>
@@ -930,6 +951,16 @@
     });
   }
   resetState();
+
+  const manualState = { register: {}, deposit: {}, reserve: {} };
+  function resetManualState() {
+    DENOMS.forEach(d => {
+      manualState.register[d.key] = { count: 0, rolls: 0 };
+      manualState.deposit[d.key]  = { count: 0, rolls: 0 };
+      manualState.reserve[d.key]  = { count: 0, rolls: 0 };
+    });
+  }
+  resetManualState();
 
   function denomOf(key) { return DENOM_MAP.get(key); }
 
@@ -1132,6 +1163,59 @@
     return inp;
   }
 
+  function buildManualBodies() {
+    ['register', 'deposit', 'reserve'].forEach(section => {
+      const tbody = document.getElementById('manual-' + section + '-body');
+      tbody.innerHTML = '';
+      DENOMS.forEach(d => {
+        const tr = document.createElement('tr');
+        const tdLabel = document.createElement('td');
+        tdLabel.textContent = d.label;
+        tr.appendChild(tdLabel);
+
+        const tdCount = document.createElement('td');
+        tdCount.className = 'input-cell';
+        tdCount.appendChild(makeManualInput(d, 'count', section));
+        tr.appendChild(tdCount);
+
+        const tdRolls = document.createElement('td');
+        if (d.hasRoll) {
+          tdRolls.className = 'input-cell';
+          tdRolls.appendChild(makeManualInput(d, 'rolls', section));
+        } else {
+          tdRolls.className = 'no-roll';
+          tdRolls.textContent = '―';
+        }
+        tr.appendChild(tdRolls);
+        tbody.appendChild(tr);
+      });
+    });
+  }
+
+  function makeManualInput(d, field, section) {
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.inputMode = isTouch ? 'none' : 'numeric';
+    inp.pattern = '[0-9]*';
+    inp.autocomplete = 'off';
+    inp.className = 'num-input manual-input';
+    inp.dataset.key = d.key;
+    inp.dataset.field = field;
+    inp.dataset.section = section;
+    const v = manualState[section][d.key][field];
+    inp.value = v ? String(v) : '';
+    return inp;
+  }
+
+  function updateManualTotals() {
+    const tReg = totalOf(manualState.register);
+    const tDep = totalOf(manualState.deposit);
+    const tRes = totalOf(manualState.reserve);
+    elManualBarRegister.textContent = document.getElementById('manual-reg-total').textContent = formatYen(tReg);
+    elManualBarDeposit.textContent  = document.getElementById('manual-dep-total').textContent = formatYen(tDep);
+    elManualBarReserve.textContent  = document.getElementById('manual-res-total').textContent = formatYen(tRes);
+  }
+
   function buildResultBody() {
     const tbody = document.getElementById('result-body');
     tbody.innerHTML = '';
@@ -1279,16 +1363,18 @@
   function saveManualRecord() {
     const dateVal = document.getElementById('manual-date').value;
     if (!dateVal) { alert('日付を入力してください'); return; }
-    const registerTotal = parseInt(document.getElementById('manual-register').value) || 0;
-    const depositTotal  = parseInt(document.getElementById('manual-deposit').value)  || 0;
-    const reserveTotal  = parseInt(document.getElementById('manual-reserve').value)  || 0;
 
     const history = loadHistory();
     history[dateVal] = {
       date: dateVal,
-      register: {}, deposit: {}, reserve: {},
-      registerTotal, depositTotal, reserveTotal,
-      target: 0, manual: true,
+      register: JSON.parse(JSON.stringify(manualState.register)),
+      deposit:  JSON.parse(JSON.stringify(manualState.deposit)),
+      reserve:  JSON.parse(JSON.stringify(manualState.reserve)),
+      registerTotal: totalOf(manualState.register),
+      depositTotal:  totalOf(manualState.deposit),
+      reserveTotal:  totalOf(manualState.reserve),
+      target: 0,
+      manual: true,
     };
     saveHistoryData(history);
     showToast('保存しました　' + dateVal.replace(/-/g, '/'));
@@ -1498,9 +1584,7 @@
       '</div>';
 
     if (rec.manual) {
-      content.innerHTML = html + '<p style="text-align:center;color:var(--text-sub);font-size:13px;padding:16px 0;">手動入力データ</p>';
-      document.getElementById('detail-modal').classList.remove('hidden');
-      return;
+      html += '<p style="text-align:center;color:var(--text-sub);font-size:12px;padding:4px 0 12px;">手動入力</p>';
     }
 
     html += '<table class="detail-table">' +
@@ -1551,10 +1635,11 @@
   let elBarRegister, elBarDeposit, elBarReserve;
   let elRegTotal, elDepTotal, elResTotal;
   let elError, elTablesGrid, elDepInfo;
+  let elManualBarRegister, elManualBarDeposit, elManualBarReserve;
   const resultCells = {};
 
   function getVisibleInputs() {
-    return Array.from(document.querySelectorAll('input.register-input, input.custom-input'))
+    return Array.from(document.querySelectorAll('input.register-input, input.custom-input, input.manual-input'))
       .filter(i => i.offsetParent !== null);
   }
 
@@ -1612,11 +1697,16 @@
       const field = t.dataset.field;
       if (t.classList.contains('register-input')) {
         state.register[key][field] = filtered === '' ? 0 : parseInt(filtered, 10);
-      } else {
+        save();
+        update();
+      } else if (t.classList.contains('custom-input')) {
         state.custom[key][field] = filtered === '' ? null : parseInt(filtered, 10);
+        save();
+        update();
+      } else if (t.classList.contains('manual-input')) {
+        manualState[t.dataset.section][key][field] = filtered === '' ? 0 : parseInt(filtered, 10);
+        updateManualTotals();
       }
-      save();
-      update();
     });
 
     document.addEventListener('focusin', (e) => {
@@ -1713,10 +1803,10 @@
 
     // Screen navigation
     document.getElementById('btn-to-manual').addEventListener('click', () => {
+      resetManualState();
+      buildManualBodies();
+      updateManualTotals();
       document.getElementById('manual-date').value = todayKey();
-      document.getElementById('manual-register').value = '';
-      document.getElementById('manual-deposit').value  = '';
-      document.getElementById('manual-reserve').value  = '';
       showScreen('manual');
     });
     document.getElementById('btn-manual-home').addEventListener('click', () => showScreen('home'));
@@ -1754,6 +1844,9 @@
     elError       = document.getElementById('error');
     elTablesGrid  = document.querySelector('.tables-grid');
     elDepInfo     = document.getElementById('deposit-info');
+    elManualBarRegister = document.getElementById('manual-bar-register');
+    elManualBarDeposit  = document.getElementById('manual-bar-deposit');
+    elManualBarReserve  = document.getElementById('manual-bar-reserve');
 
     kbEl = document.getElementById('custom-kb');
     scrollEl = document.getElementById('scroll-container');
@@ -1766,6 +1859,7 @@
     buildInputBody('register-body', 'register');
     buildInputBody('custom-body', 'custom');
     buildResultBody();
+    buildManualBodies();
     bindInputEvents();
     bindControls();
     update();
