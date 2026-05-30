@@ -405,6 +405,54 @@
     .table-section.combined td:nth-child(5) { width: 21%; }
   }
 
+  /* ===================== NAV TITLE ===================== */
+  .nav-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ===================== MANUAL INPUT FORM ===================== */
+  .manual-form {
+    padding: 16px 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .form-group {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .form-group.deposit-group { border-color: var(--accent); }
+  .form-group.reserve-group { border-color: #16a34a; }
+  .form-label {
+    display: block;
+    padding: 10px 14px 4px;
+    font-size: 12px;
+    color: var(--text-sub);
+  }
+  .form-input {
+    width: 100%;
+    padding: 4px 14px 14px;
+    font-size: 28px;
+    font-weight: 700;
+    border: none;
+    background: transparent;
+    color: var(--text);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .form-input:focus { outline: none; }
+  .form-input.date-input {
+    font-size: 18px;
+    font-weight: 500;
+    text-align: left;
+  }
+
   /* ===================== SAVE BUTTON ===================== */
   .save-area {
     position: sticky;
@@ -682,8 +730,40 @@
 <div id="screen-home" class="screen-overlay">
   <div class="home-wrap">
     <h1 class="home-title">入金計算</h1>
-    <button id="btn-to-input" class="home-btn">入力</button>
+    <button id="btn-to-manual" class="home-btn">手動入力</button>
+    <button id="btn-to-input" class="home-btn secondary">自動計算</button>
     <button id="btn-to-confirm" class="home-btn secondary">確認</button>
+  </div>
+</div>
+
+<!-- ===== MANUAL INPUT SCREEN ===== -->
+<div id="screen-manual" class="screen-overlay hidden">
+  <div class="sticky-top">
+    <div class="nav-bar">
+      <button id="btn-manual-home" class="nav-back">← ホーム</button>
+      <span class="nav-title">手動入力</span>
+    </div>
+  </div>
+  <div class="manual-form">
+    <div class="form-group">
+      <span class="form-label">日付</span>
+      <input type="date" id="manual-date" class="form-input date-input">
+    </div>
+    <div class="form-group">
+      <span class="form-label">レジ金合計</span>
+      <input type="number" id="manual-register" class="form-input" placeholder="0" min="0">
+    </div>
+    <div class="form-group deposit-group">
+      <span class="form-label">銀行入金合計</span>
+      <input type="number" id="manual-deposit" class="form-input" placeholder="0" min="0">
+    </div>
+    <div class="form-group reserve-group">
+      <span class="form-label">翌日準備金合計</span>
+      <input type="number" id="manual-reserve" class="form-input" placeholder="0" min="0">
+    </div>
+  </div>
+  <div class="save-area">
+    <button id="manual-save-btn" class="save-btn">保存</button>
   </div>
 </div>
 
@@ -1196,6 +1276,24 @@
       String(d.getDate()).padStart(2, '0');
   }
 
+  function saveManualRecord() {
+    const dateVal = document.getElementById('manual-date').value;
+    if (!dateVal) { alert('日付を入力してください'); return; }
+    const registerTotal = parseInt(document.getElementById('manual-register').value) || 0;
+    const depositTotal  = parseInt(document.getElementById('manual-deposit').value)  || 0;
+    const reserveTotal  = parseInt(document.getElementById('manual-reserve').value)  || 0;
+
+    const history = loadHistory();
+    history[dateVal] = {
+      date: dateVal,
+      register: {}, deposit: {}, reserve: {},
+      registerTotal, depositTotal, reserveTotal,
+      target: 0, manual: true,
+    };
+    saveHistoryData(history);
+    showToast('保存しました　' + dateVal.replace(/-/g, '/'));
+  }
+
   function saveRecord() {
     const { deposit, reserve } = calculate();
     const dateKey = todayKey();
@@ -1343,8 +1441,9 @@
 
   // ===== SCREEN NAVIGATION =====
   function showScreen(name) {
-    document.getElementById('screen-home').classList.toggle('hidden', name !== 'home');
-    document.getElementById('screen-confirm').classList.toggle('hidden', name !== 'confirm');
+    document.getElementById('screen-home').classList.toggle('hidden',   name !== 'home');
+    document.getElementById('screen-manual').classList.toggle('hidden', name !== 'manual');
+    document.getElementById('screen-confirm').classList.toggle('hidden',name !== 'confirm');
   }
 
   // ===== CONFIRM SCREEN =====
@@ -1396,8 +1495,15 @@
         '<div class="ms-item"><span class="ms-label">レジ金</span><span class="ms-value">' + formatYen(rec.registerTotal) + '</span></div>' +
         '<div class="ms-item dep"><span class="ms-label">銀行入金</span><span class="ms-value">' + formatYen(rec.depositTotal) + '</span></div>' +
         '<div class="ms-item res"><span class="ms-label">翌日準備金</span><span class="ms-value">' + formatYen(rec.reserveTotal) + '</span></div>' +
-      '</div>' +
-      '<table class="detail-table">' +
+      '</div>';
+
+    if (rec.manual) {
+      content.innerHTML = html + '<p style="text-align:center;color:var(--text-sub);font-size:13px;padding:16px 0;">手動入力データ</p>';
+      document.getElementById('detail-modal').classList.remove('hidden');
+      return;
+    }
+
+    html += '<table class="detail-table">' +
         '<thead>' +
           '<tr>' +
             '<th rowspan="2">種類</th>' +
@@ -1606,6 +1712,15 @@
     });
 
     // Screen navigation
+    document.getElementById('btn-to-manual').addEventListener('click', () => {
+      document.getElementById('manual-date').value = todayKey();
+      document.getElementById('manual-register').value = '';
+      document.getElementById('manual-deposit').value  = '';
+      document.getElementById('manual-reserve').value  = '';
+      showScreen('manual');
+    });
+    document.getElementById('btn-manual-home').addEventListener('click', () => showScreen('home'));
+    document.getElementById('manual-save-btn').addEventListener('click', saveManualRecord);
     document.getElementById('btn-to-input').addEventListener('click', () => showScreen('input'));
     document.getElementById('btn-to-confirm').addEventListener('click', () => {
       buildConfirmList();
