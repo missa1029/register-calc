@@ -448,6 +448,19 @@
   .table-section.deposit-section h2 { background: var(--deposit-bg); color: var(--accent); }
   .table-section.reserve-section h2 { background: var(--reserve-bg); color: #16a34a; }
 
+  /* タブレット横画面: 3テーブルを横一列 */
+  @media (min-width: 700px) and (orientation: landscape),
+         (min-width: 1000px) {
+    .manual-tables {
+      flex-direction: row;
+      align-items: flex-start;
+    }
+    .manual-tables .table-section {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
   /* ===================== SAVE BUTTON ===================== */
   .save-area {
     position: sticky;
@@ -1530,6 +1543,11 @@
     document.getElementById('screen-home').classList.toggle('hidden',   name !== 'home');
     document.getElementById('screen-manual').classList.toggle('hidden', name !== 'manual');
     document.getElementById('screen-confirm').classList.toggle('hidden',name !== 'confirm');
+    if (name === 'manual') {
+      activeScrollEl = document.getElementById('screen-manual');
+    } else {
+      activeScrollEl = scrollEl;
+    }
   }
 
   // ===== CONFIRM SCREEN =====
@@ -1631,7 +1649,7 @@
 
   // ===== DOM CACHE =====
   let activeInput = null;
-  let kbEl, scrollEl, kbHeight, hideTimer;
+  let kbEl, scrollEl, activeScrollEl, kbHeight, hideTimer;
   let elBarRegister, elBarDeposit, elBarReserve;
   let elRegTotal, elDepTotal, elResTotal;
   let elError, elTablesGrid, elDepInfo;
@@ -1644,13 +1662,13 @@
   }
 
   function scrollToInput(el) {
-    if (!scrollEl) return;
+    if (!activeScrollEl) return;
     requestAnimationFrame(() => {
       const visibleHeight = window.innerHeight - kbHeight;
       const rect = el.getBoundingClientRect();
-      const offsetFromTop = rect.top + scrollEl.scrollTop;
+      const offsetFromTop = rect.top + activeScrollEl.scrollTop;
       const target = offsetFromTop - visibleHeight / 2 + rect.height / 2;
-      scrollEl.scrollTop = Math.max(0, target);
+      activeScrollEl.scrollTop = Math.max(0, target);
     });
   }
 
@@ -1669,13 +1687,13 @@
 
   function showKeyboard() {
     kbEl.classList.remove('hidden');
-    scrollEl.style.bottom = kbHeight + 'px';
+    if (activeScrollEl) activeScrollEl.style.bottom = kbHeight + 'px';
     if (activeInput) scrollToInput(activeInput);
   }
 
   function hideKeyboard() {
     kbEl.classList.add('hidden');
-    scrollEl.style.bottom = '0';
+    if (activeScrollEl) activeScrollEl.style.bottom = '0';
     activeInput = null;
   }
 
@@ -1809,7 +1827,10 @@
       document.getElementById('manual-date').value = todayKey();
       showScreen('manual');
     });
-    document.getElementById('btn-manual-home').addEventListener('click', () => showScreen('home'));
+    document.getElementById('btn-manual-home').addEventListener('click', () => {
+      if (activeInput) { hideKeyboard(); activeInput.blur(); }
+      showScreen('home');
+    });
     document.getElementById('manual-save-btn').addEventListener('click', saveManualRecord);
     document.getElementById('btn-to-input').addEventListener('click', () => showScreen('input'));
     document.getElementById('btn-to-confirm').addEventListener('click', () => {
@@ -1850,6 +1871,7 @@
 
     kbEl = document.getElementById('custom-kb');
     scrollEl = document.getElementById('scroll-container');
+    activeScrollEl = scrollEl;
     kbEl.classList.remove('hidden');
     kbHeight = kbEl.offsetHeight;
     kbEl.classList.add('hidden');
