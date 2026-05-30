@@ -1222,32 +1222,15 @@
       return;
     }
 
-    const header = ['日付', 'レジ金合計', '銀行入金合計', '翌日準備金合計'];
-    DENOMS.forEach(d => {
-      header.push('レジ金_' + d.label + '_枚数');
-      if (d.hasRoll) header.push('レジ金_' + d.label + '_棒金');
-      header.push('銀行入金_' + d.label + '_枚数');
-      if (d.hasRoll) header.push('銀行入金_' + d.label + '_棒金');
-    });
-
-    const rows = [header];
+    const rows = [['日付', 'レジ金', '銀行入金', '翌日準備金']];
     dates.forEach(dateKey => {
       const rec = history[dateKey];
-      const row = [
+      rows.push([
         dateKey.replace(/-/g, '/'),
         rec.registerTotal,
         rec.depositTotal,
         rec.reserveTotal,
-      ];
-      DENOMS.forEach(d => {
-        const reg = rec.register[d.key] || { count: 0, rolls: 0 };
-        const dep = rec.deposit[d.key]  || { count: 0, rolls: 0 };
-        row.push(reg.count);
-        if (d.hasRoll) row.push(reg.rolls);
-        row.push(dep.count);
-        if (d.hasRoll) row.push(dep.rolls);
-      });
-      rows.push(row);
+      ]);
     });
 
     const csv = '﻿' + rows.map(r => r.join(',')).join('\r\n');
