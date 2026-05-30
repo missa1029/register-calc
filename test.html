@@ -1223,39 +1223,98 @@
     }
 
     const doExport = () => {
+      const BG_HDR = 'F3F4F6';
+      const BG_REG = 'FFFFFF';
+      const BG_DEP = 'DBEAFE';
+      const BG_RES = 'DCFCE7';
+      const THIN   = { style: 'thin',   color: { rgb: '9CA3AF' } };
+      const MEDIUM = { style: 'medium',  color: { rgb: '6B7280' } };
+
+      function makeBorder(thickBottom) {
+        return { top: THIN, left: THIN, right: THIN, bottom: thickBottom ? MEDIUM : THIN };
+      }
+
+      function cs(opts) {
+        const s = {
+          font: { name: 'Meiryo UI', sz: 10, bold: !!opts.bold },
+          alignment: { horizontal: opts.align || 'right', vertical: 'center' },
+          border: makeBorder(!!opts.thick),
+        };
+        if (opts.bg) s.fill = { patternType: 'solid', fgColor: { rgb: opts.bg } };
+        if (opts.diag) {
+          s.border.diagonal    = { style: 'thin', color: { rgb: '374151' } };
+          s.border.diagonalDown = true;
+        }
+        return s;
+      }
+
+      function sc(ws, r, c, v, s) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        ws[addr] = { t: typeof v === 'number' ? 'n' : 's', v: v ?? '', s };
+      }
+
       const wb = XLSX.utils.book_new();
 
       dates.forEach(dateKey => {
         const rec = history[dateKey];
         const parts = dateKey.split('-');
-        const sheetName = parts[1] + '-' + parts[2]; // "05-30"
+        const sheetName = parts[1] + '-' + parts[2];
+        const ws = {};
 
-        const aoa = [
-          ['種類', 'レジ金', '',  '銀行入金', '',  '翌日準備金', ''],
-          ['',     '枚数',  '棒金', '枚数',  '棒金', '枚数',    '棒金'],
-        ];
-
-        DENOMS.forEach(d => {
-          const reg = rec.register[d.key] || { count: 0, rolls: 0 };
-          const dep = rec.deposit[d.key]  || { count: 0, rolls: 0 };
-          const res = rec.reserve[d.key]  || { count: 0, rolls: 0 };
-          aoa.push([
-            d.label,
-            reg.count, d.hasRoll ? reg.rolls : '―',
-            dep.count, d.hasRoll ? dep.rolls : '―',
-            res.count, d.hasRoll ? res.rolls : '―',
-          ]);
-        });
-
-        aoa.push(['合計', rec.registerTotal, '', rec.depositTotal, '', rec.reserveTotal, '']);
-
-        const ws = XLSX.utils.aoa_to_sheet(aoa);
         ws['!merges'] = [
+          { s: { r: 0, c: 0 }, e: { r: 1, c: 0 } },
           { s: { r: 0, c: 1 }, e: { r: 0, c: 2 } },
           { s: { r: 0, c: 3 }, e: { r: 0, c: 4 } },
           { s: { r: 0, c: 5 }, e: { r: 0, c: 6 } },
         ];
+        ws['!cols'] = [9, 7, 7, 7, 7, 7, 7].map(w => ({ wch: w }));
 
+        // Row 0: section headers
+        sc(ws,0,0,'種類',     cs({ bg:BG_HDR, align:'center', bold:true }));
+        sc(ws,0,1,'レジ金',   cs({ bg:BG_REG, align:'center', bold:true }));
+        sc(ws,0,2,'',         cs({ bg:BG_REG, align:'center' }));
+        sc(ws,0,3,'銀行入金', cs({ bg:BG_DEP, align:'center', bold:true }));
+        sc(ws,0,4,'',         cs({ bg:BG_DEP, align:'center' }));
+        sc(ws,0,5,'翌日準備金',cs({ bg:BG_RES, align:'center', bold:true }));
+        sc(ws,0,6,'',         cs({ bg:BG_RES, align:'center' }));
+
+        // Row 1: sub headers
+        sc(ws,1,0,'',   cs({ bg:BG_HDR, align:'center' }));
+        sc(ws,1,1,'枚数',cs({ bg:BG_REG, align:'center' }));
+        sc(ws,1,2,'棒金',cs({ bg:BG_REG, align:'center' }));
+        sc(ws,1,3,'枚数',cs({ bg:BG_DEP, align:'center' }));
+        sc(ws,1,4,'棒金',cs({ bg:BG_DEP, align:'center' }));
+        sc(ws,1,5,'枚数',cs({ bg:BG_RES, align:'center' }));
+        sc(ws,1,6,'棒金',cs({ bg:BG_RES, align:'center' }));
+
+        // Data rows
+        DENOMS.forEach((d, i) => {
+          const r = i + 2;
+          const thick = i === 3; // 1000円の下に太線
+          const reg = rec.register[d.key] || { count:0, rolls:0 };
+          const dep = rec.deposit[d.key]  || { count:0, rolls:0 };
+          const res = rec.reserve[d.key]  || { count:0, rolls:0 };
+
+          sc(ws,r,0, d.label,   cs({ bg:BG_HDR, align:'left', thick }));
+          sc(ws,r,1, reg.count, cs({ bg:BG_REG, thick }));
+          sc(ws,r,2, d.hasRoll ? reg.rolls : '', cs({ bg:BG_REG, diag:!d.hasRoll, thick }));
+          sc(ws,r,3, dep.count, cs({ bg:BG_DEP, thick }));
+          sc(ws,r,4, d.hasRoll ? dep.rolls : '', cs({ bg:BG_DEP, diag:!d.hasRoll, thick }));
+          sc(ws,r,5, res.count, cs({ bg:BG_RES, thick }));
+          sc(ws,r,6, d.hasRoll ? res.rolls : '', cs({ bg:BG_RES, diag:!d.hasRoll, thick }));
+        });
+
+        // 合計 row
+        const tr = DENOMS.length + 2;
+        sc(ws,tr,0,'合計',            cs({ bg:BG_HDR, align:'left', bold:true }));
+        sc(ws,tr,1, rec.registerTotal, cs({ bg:BG_REG, bold:true }));
+        sc(ws,tr,2,'',                cs({ bg:BG_REG }));
+        sc(ws,tr,3, rec.depositTotal,  cs({ bg:BG_DEP, bold:true }));
+        sc(ws,tr,4,'',                cs({ bg:BG_DEP }));
+        sc(ws,tr,5, rec.reserveTotal,  cs({ bg:BG_RES, bold:true }));
+        sc(ws,tr,6,'',                cs({ bg:BG_RES }));
+
+        ws['!ref'] = XLSX.utils.encode_range({ s:{r:0,c:0}, e:{r:tr,c:6} });
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
       });
 
@@ -1265,7 +1324,7 @@
     if (typeof XLSX === 'undefined') {
       showToast('ライブラリを読み込み中...');
       const s = document.createElement('script');
-      s.src = 'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js';
+      s.src = 'https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js';
       s.onload = doExport;
       s.onerror = () => alert('読み込み失敗。インターネット接続を確認してください。');
       document.head.appendChild(s);
