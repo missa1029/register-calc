@@ -1353,8 +1353,23 @@
     });
   }
 
-  function equalizeResultRows() {
+  function alignTables() {
+    const regBody = document.getElementById('register-body');
+    const comBody = document.getElementById('result-body');
+    if (!regBody || !comBody) return;
+
+    const regHeaderRow = regBody.closest('table').querySelector('thead tr');
+    if (regHeaderRow) regHeaderRow.style.height = '';
+
     requestAnimationFrame(() => {
+      // tbodyの開始位置を揃える（ヘッダー行の高さで調整）
+      if (regHeaderRow) {
+        const diff = comBody.getBoundingClientRect().top - regBody.getBoundingClientRect().top;
+        if (diff > 1) {
+          regHeaderRow.style.height = (regHeaderRow.offsetHeight + Math.round(diff)) + 'px';
+        }
+      }
+      // 各データ行の高さを揃える
       const inputRows = document.querySelectorAll('#register-body tr');
       const resultRows = document.querySelectorAll('#result-body tr');
       inputRows.forEach((row, i) => {
@@ -1972,8 +1987,8 @@
     buildInputBody('custom-body', 'custom');
     buildResultBody();
     buildManualBodies();
-    equalizeResultRows();
-    window.addEventListener('resize', equalizeResultRows);
+    alignTables();
+    window.addEventListener('resize', alignTables);
     bindInputEvents();
     bindControls();
     update();
