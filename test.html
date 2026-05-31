@@ -459,10 +459,6 @@
     border-color: var(--border);
     background: var(--bg) !important;
   }
-  /* combined 表内の input-cell はモバイルでも padding: 4px を維持 */
-  @media (max-width: 899px) {
-    .table-section.combined td.input-cell { padding: 4px; }
-  }
 
   /* タブレット横画面: 3テーブルを横一列 */
   @media (min-width: 700px) and (orientation: landscape),
@@ -1323,18 +1319,16 @@
         const sep = scope === 'deposit' ? ' sep-col' : '';
 
         const tdCount = document.createElement('td');
-        tdCount.className = 'input-cell';
-        const inpCount = makeReadonlyInput();
-        tdCount.appendChild(inpCount);
-        resultCells[scope + ':' + d.key + ':count'] = inpCount;
+        tdCount.className = 'value-cell';
+        tdCount.textContent = '0';
+        resultCells[scope + ':' + d.key + ':count'] = tdCount;
         tr.appendChild(tdCount);
 
         const tdRolls = document.createElement('td');
         if (d.hasRoll) {
-          tdRolls.className = 'input-cell' + sep;
-          const inpRolls = makeReadonlyInput();
-          tdRolls.appendChild(inpRolls);
-          resultCells[scope + ':' + d.key + ':rolls'] = inpRolls;
+          tdRolls.className = 'value-cell' + sep;
+          tdRolls.textContent = '0';
+          resultCells[scope + ':' + d.key + ':rolls'] = tdRolls;
         } else {
           tdRolls.className = 'no-roll' + sep;
           tdRolls.textContent = '―';
@@ -1352,10 +1346,20 @@
         const cell = resultCells[scope + ':' + d.key + ':' + field];
         if (!cell) continue;
         const v = stockMap[d.key][field] || 0;
-        cell.value = String(v);
-        const isCustom = scope === 'deposit' && state.custom[d.key][field] !== null;
-        cell.style.color = isCustom ? '#dc2626' : v === 0 ? 'var(--text-sub)' : '';
+        cell.textContent = v;
+        cell.classList.toggle('zero', v === 0);
+        cell.classList.toggle('custom-val', scope === 'deposit' && state.custom[d.key][field] !== null);
       }
+    });
+  }
+
+  function equalizeResultRows() {
+    requestAnimationFrame(() => {
+      const inputRows = document.querySelectorAll('#register-body tr');
+      const resultRows = document.querySelectorAll('#result-body tr');
+      inputRows.forEach((row, i) => {
+        if (resultRows[i]) resultRows[i].style.height = row.offsetHeight + 'px';
+      });
     });
   }
 
@@ -1968,6 +1972,8 @@
     buildInputBody('custom-body', 'custom');
     buildResultBody();
     buildManualBodies();
+    equalizeResultRows();
+    window.addEventListener('resize', equalizeResultRows);
     bindInputEvents();
     bindControls();
     update();
