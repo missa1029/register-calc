@@ -769,14 +769,14 @@
         <span class="value" id="manual-bar-register">¥0</span>
       </div>
       <div class="total-item deposit" id="manual-dep-bar">
-        <span class="label">銀行入金 目標</span>
+        <span class="label">銀行入金</span>
         <span class="value" id="manual-bar-dep-target">¥0</span>
-        <span class="bar-sub" id="manual-bar-dep-actual">入力 ¥0</span>
+        <span class="bar-sub" id="manual-bar-dep-actual"></span>
       </div>
       <div class="total-item reserve" id="manual-res-bar">
-        <span class="label">翌日準備金 目標</span>
+        <span class="label">翌日準備金</span>
         <span class="value" id="manual-bar-res-target">¥0</span>
-        <span class="bar-sub" id="manual-bar-res-actual">計算 ¥0</span>
+        <span class="bar-sub" id="manual-bar-res-actual"></span>
       </div>
     </div>
   </div>
@@ -1309,12 +1309,15 @@ function buildManualReserveDisplay() {
     document.getElementById('manual-dep-total').textContent = formatYen(tDep);
     document.getElementById('manual-res-total').textContent = formatYen(tRes);
 
+    const depDiff = depTarget - tDep;
+    const resDiff = manualTarget - tRes;
+
     elManualDepTarget.textContent = formatYen(depTarget);
-    elManualDepActual.textContent = '入力 ' + formatYen(tDep) + (depMatched ? ' ✓' : '');
+    elManualDepActual.textContent = tReg === 0 ? '' : depMatched ? '✓' : '差額 ' + formatYen(depDiff);
     elManualDepActual.className   = 'bar-sub' + (depMatched ? ' ok' : tReg > 0 ? ' ng' : '');
 
     elManualResTarget.textContent = formatYen(manualTarget);
-    elManualResActual.textContent = '計算 ' + formatYen(tRes) + (resMatched ? ' ✓' : '');
+    elManualResActual.textContent = tReg === 0 ? '' : resMatched ? '✓' : '差額 ' + formatYen(resDiff);
     elManualResActual.className   = 'bar-sub' + (resMatched ? ' ok' : tReg > 0 ? ' ng' : '');
   }
 
