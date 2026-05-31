@@ -448,14 +448,22 @@
   .table-section.deposit-section h2 { background: var(--deposit-bg); color: var(--accent); }
   .table-section.reserve-section h2 { background: var(--reserve-bg); color: #16a34a; }
 
-  /* 翌日準備金（自動）の行高をinputセルに合わせる */
-  .manual-tables .reserve-section td.value-cell {
-    padding: 17px 8px;
+  /* 翌日準備金（自動）: inputと同一スタイルの表示div */
+  .reserve-display {
+    width: 100%;
+    padding: 12px 8px;
+    font-size: 16px;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+    box-sizing: border-box;
   }
   @media (max-width: 899px) {
-    .manual-tables .reserve-section td.value-cell {
-      padding: 19px 6px;
-    }
+    .reserve-display { padding: 14px 8px; }
   }
 
   /* タブレット横画面: 3テーブルを横一列 */
@@ -1221,21 +1229,28 @@
     tbody.innerHTML = '';
     DENOMS.forEach(d => {
       const tr = document.createElement('tr');
+
       const tdLabel = document.createElement('td');
       tdLabel.textContent = d.label;
       tr.appendChild(tdLabel);
 
       const tdCount = document.createElement('td');
-      tdCount.className = 'value-cell';
-      tdCount.textContent = '0';
-      manualReserveCells[d.key + ':count'] = tdCount;
+      tdCount.className = 'input-cell';
+      const divCount = document.createElement('div');
+      divCount.className = 'reserve-display';
+      divCount.textContent = '0';
+      tdCount.appendChild(divCount);
+      manualReserveCells[d.key + ':count'] = divCount;
       tr.appendChild(tdCount);
 
       const tdRolls = document.createElement('td');
       if (d.hasRoll) {
-        tdRolls.className = 'value-cell';
-        tdRolls.textContent = '0';
-        manualReserveCells[d.key + ':rolls'] = tdRolls;
+        tdRolls.className = 'input-cell';
+        const divRolls = document.createElement('div');
+        divRolls.className = 'reserve-display';
+        divRolls.textContent = '0';
+        tdRolls.appendChild(divRolls);
+        manualReserveCells[d.key + ':rolls'] = divRolls;
       } else {
         tdRolls.className = 'no-roll';
         tdRolls.textContent = '―';
