@@ -448,6 +448,16 @@
   .table-section.deposit-section h2 { background: var(--deposit-bg); color: var(--accent); }
   .table-section.reserve-section h2 { background: var(--reserve-bg); color: #16a34a; }
 
+  /* 翌日準備金（自動）の行高をinputセルに合わせる */
+  .manual-tables .reserve-section td.value-cell {
+    padding: 17px 8px;
+  }
+  @media (max-width: 899px) {
+    .manual-tables .reserve-section td.value-cell {
+      padding: 19px 6px;
+    }
+  }
+
   /* タブレット横画面: 3テーブルを横一列 */
   @media (min-width: 700px) and (orientation: landscape),
          (min-width: 1000px) {
