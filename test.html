@@ -448,17 +448,6 @@
   .table-section.deposit-section h2 { background: var(--deposit-bg); color: var(--accent); }
   .table-section.reserve-section h2 { background: var(--reserve-bg); color: #16a34a; }
 
-  /* readonly 表示用 input（翌日準備金自動・結果表共通） */
-  input.result-readonly {
-    background: var(--bg) !important;
-    cursor: default;
-    pointer-events: none;
-  }
-  input.result-readonly:focus {
-    outline: none;
-    border-color: var(--border);
-    background: var(--bg) !important;
-  }
 
   /* タブレット横画面: 3テーブルを横一列 */
   @media (min-width: 700px) and (orientation: landscape),
@@ -1218,17 +1207,7 @@
     buildManualReserveDisplay();
   }
 
-  function makeReadonlyInput() {
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.readOnly = true;
-    inp.tabIndex = -1;
-    inp.className = 'num-input result-readonly';
-    inp.value = '0';
-    return inp;
-  }
-
-  function buildManualReserveDisplay() {
+function buildManualReserveDisplay() {
     const tbody = document.getElementById('manual-reserve-body');
     tbody.innerHTML = '';
     DENOMS.forEach(d => {
@@ -1239,18 +1218,16 @@
       tr.appendChild(tdLabel);
 
       const tdCount = document.createElement('td');
-      tdCount.className = 'input-cell';
-      const inpCount = makeReadonlyInput();
-      tdCount.appendChild(inpCount);
-      manualReserveCells[d.key + ':count'] = inpCount;
+      tdCount.className = 'value-cell';
+      tdCount.textContent = '0';
+      manualReserveCells[d.key + ':count'] = tdCount;
       tr.appendChild(tdCount);
 
       const tdRolls = document.createElement('td');
       if (d.hasRoll) {
-        tdRolls.className = 'input-cell';
-        const inpRolls = makeReadonlyInput();
-        tdRolls.appendChild(inpRolls);
-        manualReserveCells[d.key + ':rolls'] = inpRolls;
+        tdRolls.className = 'value-cell';
+        tdRolls.textContent = '0';
+        manualReserveCells[d.key + ':rolls'] = tdRolls;
       } else {
         tdRolls.className = 'no-roll';
         tdRolls.textContent = '―';
@@ -1270,12 +1247,14 @@
 
       const cc = manualReserveCells[d.key + ':count'];
       if (cc) {
-        cc.value = String(count);
+        cc.textContent = count;
+        cc.classList.toggle('zero', count === 0);
         cc.style.color = count < 0 ? 'var(--error-text)' : '';
       }
       const rc = manualReserveCells[d.key + ':rolls'];
       if (rc) {
-        rc.value = String(rolls);
+        rc.textContent = rolls;
+        rc.classList.toggle('zero', rolls === 0);
         rc.style.color = rolls < 0 ? 'var(--error-text)' : '';
       }
     });
@@ -1350,6 +1329,16 @@
         cell.classList.toggle('zero', v === 0);
         cell.classList.toggle('custom-val', scope === 'deposit' && state.custom[d.key][field] !== null);
       }
+    });
+  }
+
+  function alignManualTables() {
+    requestAnimationFrame(() => {
+      const inputRows  = document.querySelectorAll('#manual-register-body tr');
+      const reserveRows = document.querySelectorAll('#manual-reserve-body tr');
+      inputRows.forEach((row, i) => {
+        if (reserveRows[i]) reserveRows[i].style.height = row.offsetHeight + 'px';
+      });
     });
   }
 
@@ -1931,6 +1920,7 @@
       updateManualTotals();
       document.getElementById('manual-date').value = todayKey();
       showScreen('manual');
+      alignManualTables();
     });
     document.getElementById('btn-manual-home').addEventListener('click', () => {
       if (activeInput) { hideKeyboard(); activeInput.blur(); }
@@ -1988,7 +1978,8 @@
     buildResultBody();
     buildManualBodies();
     alignTables();
-    window.addEventListener('resize', alignTables);
+    alignManualTables();
+    window.addEventListener('resize', () => { alignTables(); alignManualTables(); });
     bindInputEvents();
     bindControls();
     update();
