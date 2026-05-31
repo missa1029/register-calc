@@ -1145,7 +1145,7 @@
 
     const integrityErrors = verifyIntegrity(deposit, reserve);
     if (integrityErrors.length > 0) {
-      errors.unshift.apply(errors, integrityErrors);
+      errors.unshift(...integrityErrors);
     }
 
     return { deposit, reserve, errors, depositTarget, registerTotal };
@@ -1228,7 +1228,7 @@
     buildManualReserveDisplay();
   }
 
-function buildManualReserveDisplay() {
+  function buildManualReserveDisplay() {
     const tbody = document.getElementById('manual-reserve-body');
     tbody.innerHTML = '';
     DENOMS.forEach(d => {
@@ -1306,10 +1306,9 @@ function buildManualReserveDisplay() {
     const depMatched = tReg > 0 && tDep === depTarget;
     const resMatched = tReg > 0 && tRes === manualTarget;
 
-    elManualBarRegister.textContent = formatYen(tReg);
-    document.getElementById('manual-reg-total').textContent = formatYen(tReg);
-    document.getElementById('manual-dep-total').textContent = formatYen(tDep);
-    document.getElementById('manual-res-total').textContent = formatYen(tRes);
+    elManualBarRegister.textContent = elManualRegTotal.textContent = formatYen(tReg);
+    elManualDepTotal.textContent = formatYen(tDep);
+    elManualResTotal.textContent = formatYen(tRes);
 
     const depDiff = depTarget - tDep;
     const resDiff = manualTarget - tRes;
@@ -1390,14 +1389,12 @@ function buildManualReserveDisplay() {
     if (regHeaderRow) regHeaderRow.style.height = '';
 
     requestAnimationFrame(() => {
-      // tbodyの開始位置を揃える（ヘッダー行の高さで調整）
       if (regHeaderRow) {
         const diff = comBody.getBoundingClientRect().top - regBody.getBoundingClientRect().top;
         if (diff > 1) {
           regHeaderRow.style.height = (regHeaderRow.offsetHeight + Math.round(diff)) + 'px';
         }
       }
-      // 各データ行の高さを揃える
       const inputRows = document.querySelectorAll('#register-body tr');
       const resultRows = document.querySelectorAll('#result-body tr');
       inputRows.forEach((row, i) => {
@@ -1506,13 +1503,12 @@ function buildManualReserveDisplay() {
 
   function saveManualRecord() {
     const dateVal = todayKey();
-
     const history = loadHistory();
     history[dateVal] = {
       date: dateVal,
-      register: JSON.parse(JSON.stringify(manualState.register)),
-      deposit:  JSON.parse(JSON.stringify(manualState.deposit)),
-      reserve:  JSON.parse(JSON.stringify(manualState.reserve)),
+      register: structuredClone(manualState.register),
+      deposit:  structuredClone(manualState.deposit),
+      reserve:  structuredClone(manualState.reserve),
       registerTotal: totalOf(manualState.register),
       depositTotal:  totalOf(manualState.deposit),
       reserveTotal:  totalOf(manualState.reserve),
@@ -1529,9 +1525,9 @@ function buildManualReserveDisplay() {
     const history = loadHistory();
     history[dateKey] = {
       date: dateKey,
-      register: JSON.parse(JSON.stringify(state.register)),
-      deposit:  JSON.parse(JSON.stringify(deposit)),
-      reserve:  JSON.parse(JSON.stringify(reserve)),
+      register: structuredClone(state.register),
+      deposit:  structuredClone(deposit),
+      reserve:  structuredClone(reserve),
       registerTotal: totalOf(state.register),
       depositTotal:  totalOf(deposit),
       reserveTotal:  totalOf(reserve),
@@ -1706,7 +1702,7 @@ function buildManualReserveDisplay() {
         '<td>' + formatYen(rec.registerTotal) + '</td>' +
         '<td>' + formatYen(rec.depositTotal)  + '</td>' +
         '<td>' + formatYen(rec.reserveTotal)  + '</td>';
-      tr.addEventListener('click', () => showDetail(dateKey));
+      tr.addEventListener('click', () => showDetail(dateKey, rec));
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
@@ -1716,8 +1712,8 @@ function buildManualReserveDisplay() {
   }
 
   // ===== DETAIL MODAL =====
-  function showDetail(dateKey) {
-    const rec = loadHistory()[dateKey];
+  function showDetail(dateKey, rec) {
+    if (!rec) rec = loadHistory()[dateKey];
     if (!rec) return;
 
     document.getElementById('detail-date-label').textContent = dateKey.replace(/-/g, '/');
@@ -1784,8 +1780,9 @@ function buildManualReserveDisplay() {
   let elRegTotal, elDepTotal, elResTotal;
   let elError, elTablesGrid, elDepInfo;
   let elManualBarRegister;
-  let elManualDepTarget, elManualDepActual, elManualDepBar;
-  let elManualResTarget, elManualResActual, elManualResBar;
+  let elManualDepTarget, elManualDepActual;
+  let elManualResTarget, elManualResActual;
+  let elManualRegTotal, elManualDepTotal, elManualResTotal;
   const resultCells = {};
   const manualReserveCells = {};
 
@@ -1846,17 +1843,17 @@ function buildManualReserveDisplay() {
 
       const key = t.dataset.key;
       const field = t.dataset.field;
-      if (t.classList.contains('register-input')) {
-        state.register[key][field] = filtered === '' ? 0 : parseInt(filtered, 10);
-        save();
-        update();
-      } else if (t.classList.contains('custom-input')) {
-        state.custom[key][field] = filtered === '' ? null : parseInt(filtered, 10);
-        save();
-        update();
-      } else if (t.classList.contains('manual-input')) {
+      if (t.classList.contains('manual-input')) {
         manualState[t.dataset.section][key][field] = filtered === '' ? 0 : parseInt(filtered, 10);
         updateManualTotals();
+      } else {
+        if (t.classList.contains('register-input')) {
+          state.register[key][field] = filtered === '' ? 0 : parseInt(filtered, 10);
+        } else {
+          state.custom[key][field] = filtered === '' ? null : parseInt(filtered, 10);
+        }
+        save();
+        update();
       }
     });
 
@@ -1932,12 +1929,9 @@ function buildManualReserveDisplay() {
   function bindControls() {
     document.querySelectorAll('input[name="target"]').forEach(r => {
       r.addEventListener('change', () => {
-        const checked = document.querySelector('input[name="target"]:checked');
-        if (checked) {
-          state.target = parseInt(checked.value, 10);
-          save();
-          update();
-        }
+        state.target = parseInt(r.value, 10);
+        save();
+        update();
       });
     });
 
@@ -1993,7 +1987,7 @@ function buildManualReserveDisplay() {
     document.getElementById('detail-close').addEventListener('click', hideDetail);
     document.getElementById('detail-grip').addEventListener('click', hideDetail);
     document.getElementById('detail-modal').addEventListener('click', e => {
-      if (e.target === document.getElementById('detail-modal')) hideDetail();
+      if (e.target === e.currentTarget) hideDetail();
     });
   }
 
@@ -2010,10 +2004,11 @@ function buildManualReserveDisplay() {
     elManualBarRegister = document.getElementById('manual-bar-register');
     elManualDepTarget   = document.getElementById('manual-bar-dep-target');
     elManualDepActual   = document.getElementById('manual-bar-dep-actual');
-    elManualDepBar      = document.getElementById('manual-dep-bar');
     elManualResTarget   = document.getElementById('manual-bar-res-target');
     elManualResActual   = document.getElementById('manual-bar-res-actual');
-    elManualResBar      = document.getElementById('manual-res-bar');
+    elManualRegTotal    = document.getElementById('manual-reg-total');
+    elManualDepTotal    = document.getElementById('manual-dep-total');
+    elManualResTotal    = document.getElementById('manual-res-total');
 
     kbEl = document.getElementById('custom-kb');
     scrollEl = document.getElementById('scroll-container');
@@ -2030,7 +2025,11 @@ function buildManualReserveDisplay() {
     buildManualBodies();
     alignTables();
     alignManualTables();
-    window.addEventListener('resize', () => { alignTables(); alignManualTables(); });
+    let _alignTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(_alignTimer);
+      _alignTimer = setTimeout(() => { alignTables(); alignManualTables(); }, 120);
+    });
     bindInputEvents();
     bindControls();
     update();
