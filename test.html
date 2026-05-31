@@ -788,7 +788,7 @@
       </table>
     </section>
     <section class="table-section reserve-section">
-      <h2>翌日準備金（入力）<span class="total" id="manual-res-total">¥0</span></h2>
+      <h2>翌日準備金（自動）<span class="total" id="manual-res-total">¥0</span></h2>
       <table>
         <thead><tr><th>種類</th><th>枚数</th><th>棒金本数</th></tr></thead>
         <tbody id="manual-reserve-body"></tbody>
@@ -1177,7 +1177,7 @@
   }
 
   function buildManualBodies() {
-    ['register', 'deposit', 'reserve'].forEach(section => {
+    ['register', 'deposit'].forEach(section => {
       const tbody = document.getElementById('manual-' + section + '-body');
       tbody.innerHTML = '';
       DENOMS.forEach(d => {
@@ -1203,6 +1203,59 @@
         tbody.appendChild(tr);
       });
     });
+    buildManualReserveDisplay();
+  }
+
+  function buildManualReserveDisplay() {
+    const tbody = document.getElementById('manual-reserve-body');
+    tbody.innerHTML = '';
+    DENOMS.forEach(d => {
+      const tr = document.createElement('tr');
+      const tdLabel = document.createElement('td');
+      tdLabel.textContent = d.label;
+      tr.appendChild(tdLabel);
+
+      const tdCount = document.createElement('td');
+      tdCount.className = 'value-cell';
+      tdCount.textContent = '0';
+      manualReserveCells[d.key + ':count'] = tdCount;
+      tr.appendChild(tdCount);
+
+      const tdRolls = document.createElement('td');
+      if (d.hasRoll) {
+        tdRolls.className = 'value-cell';
+        tdRolls.textContent = '0';
+        manualReserveCells[d.key + ':rolls'] = tdRolls;
+      } else {
+        tdRolls.className = 'no-roll';
+        tdRolls.textContent = '―';
+      }
+      tr.appendChild(tdRolls);
+      tbody.appendChild(tr);
+    });
+  }
+
+  function updateManualReserve() {
+    DENOMS.forEach(d => {
+      const reg = manualState.register[d.key];
+      const dep = manualState.deposit[d.key];
+      const count = (reg.count || 0) - (dep.count || 0);
+      const rolls = (reg.rolls || 0) - (dep.rolls || 0);
+      manualState.reserve[d.key] = { count, rolls };
+
+      const cc = manualReserveCells[d.key + ':count'];
+      if (cc) {
+        cc.textContent = count;
+        cc.classList.toggle('zero', count === 0);
+        cc.style.color = count < 0 ? 'var(--error-text)' : '';
+      }
+      const rc = manualReserveCells[d.key + ':rolls'];
+      if (rc) {
+        rc.textContent = rolls;
+        rc.classList.toggle('zero', rolls === 0);
+        rc.style.color = rolls < 0 ? 'var(--error-text)' : '';
+      }
+    });
   }
 
   function makeManualInput(d, field, section) {
@@ -1221,6 +1274,7 @@
   }
 
   function updateManualTotals() {
+    updateManualReserve();
     const tReg = totalOf(manualState.register);
     const tDep = totalOf(manualState.deposit);
     const tRes = totalOf(manualState.reserve);
@@ -1655,6 +1709,7 @@
   let elError, elTablesGrid, elDepInfo;
   let elManualBarRegister, elManualBarDeposit, elManualBarReserve;
   const resultCells = {};
+  const manualReserveCells = {};
 
   function getVisibleInputs() {
     return Array.from(document.querySelectorAll('input.register-input, input.custom-input, input.manual-input'))
