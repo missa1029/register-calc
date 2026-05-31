@@ -1705,7 +1705,7 @@
     document.addEventListener('input', (e) => {
       const t = e.target;
       if (!(t instanceof HTMLInputElement)) return;
-      if (!t.classList.contains('register-input') && !t.classList.contains('custom-input')) return;
+      if (!t.classList.contains('register-input') && !t.classList.contains('custom-input') && !t.classList.contains('manual-input')) return;
 
       const normalized = t.value.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
       const filtered = normalized.replace(/[^0-9]/g, '');
