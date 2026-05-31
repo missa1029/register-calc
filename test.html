@@ -420,8 +420,9 @@
     font-variant-numeric: tabular-nums;
     color: var(--text-sub);
   }
-  .bar-sub.ok { color: #16a34a; font-weight: 700; }
-  .bar-sub.ng { color: var(--error-text); }
+  .bar-sub.ok  { color: #16a34a; font-weight: 700; }
+  .bar-sub.pos { color: var(--accent); }
+  .bar-sub.neg { color: var(--error-text); }
 
   /* ===================== MANUAL DATE ROW ===================== */
   .manual-date-wrap {
@@ -1311,14 +1312,15 @@ function buildManualReserveDisplay() {
 
     const depDiff = depTarget - tDep;
     const resDiff = manualTarget - tRes;
+    const fmtDiff = d => (d > 0 ? '+' : '') + formatYen(d);
 
     elManualDepTarget.textContent = formatYen(depTarget);
-    elManualDepActual.textContent = tReg === 0 ? '' : depMatched ? '✓' : '差額 ' + formatYen(depDiff);
-    elManualDepActual.className   = 'bar-sub' + (depMatched ? ' ok' : tReg > 0 ? ' ng' : '');
+    elManualDepActual.textContent = tReg === 0 ? '' : depMatched ? '✓' : fmtDiff(depDiff);
+    elManualDepActual.className   = 'bar-sub ' + (depMatched ? 'ok' : tReg === 0 ? '' : depDiff > 0 ? 'pos' : 'neg');
 
     elManualResTarget.textContent = formatYen(manualTarget);
-    elManualResActual.textContent = tReg === 0 ? '' : resMatched ? '✓' : '差額 ' + formatYen(resDiff);
-    elManualResActual.className   = 'bar-sub' + (resMatched ? ' ok' : tReg > 0 ? ' ng' : '');
+    elManualResActual.textContent = tReg === 0 ? '' : resMatched ? '✓' : fmtDiff(resDiff);
+    elManualResActual.className   = 'bar-sub ' + (resMatched ? 'ok' : tReg === 0 ? '' : resDiff > 0 ? 'pos' : 'neg');
   }
 
   function buildResultBody() {
