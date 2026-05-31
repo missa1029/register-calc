@@ -446,6 +446,7 @@
     border-radius: 6px;
     background: var(--bg);
     color: var(--text);
+    pointer-events: none;
   }
 
   /* ===================== MANUAL TABLES ===================== */
@@ -784,7 +785,7 @@
 
   <div class="manual-date-wrap">
     <label class="manual-date-label" for="manual-date">日付</label>
-    <input type="date" id="manual-date" class="manual-date-input">
+    <input type="date" id="manual-date" class="manual-date-input" readonly>
     <div class="target-select" style="margin-left:auto;">
       <label><input type="radio" name="manual-target" value="300000" checked><span>30万</span></label>
       <label><input type="radio" name="manual-target" value="290000"><span>29万</span></label>
@@ -1504,8 +1505,7 @@ function buildManualReserveDisplay() {
   }
 
   function saveManualRecord() {
-    const dateVal = document.getElementById('manual-date').value;
-    if (!dateVal) { alert('日付を入力してください'); return; }
+    const dateVal = todayKey();
 
     const history = loadHistory();
     history[dateVal] = {
