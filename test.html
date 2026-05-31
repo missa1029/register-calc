@@ -448,17 +448,20 @@
   .table-section.deposit-section h2 { background: var(--deposit-bg); color: var(--accent); }
   .table-section.reserve-section h2 { background: var(--reserve-bg); color: #16a34a; }
 
-  /* 翌日準備金（自動）: readonly input */
-  input.reserve-readonly {
+  /* readonly 表示用 input（翌日準備金自動・結果表共通） */
+  input.result-readonly {
     background: var(--bg) !important;
     cursor: default;
     pointer-events: none;
-    color: var(--text-sub);
   }
-  input.reserve-readonly:focus {
+  input.result-readonly:focus {
     outline: none;
     border-color: var(--border);
     background: var(--bg) !important;
+  }
+  /* combined 表内の input-cell はモバイルでも padding: 4px を維持 */
+  @media (max-width: 899px) {
+    .table-section.combined td.input-cell { padding: 4px; }
   }
 
   /* タブレット横画面: 3テーブルを横一列 */
@@ -1219,12 +1222,12 @@
     buildManualReserveDisplay();
   }
 
-  function makeReserveDisplay() {
+  function makeReadonlyInput() {
     const inp = document.createElement('input');
     inp.type = 'text';
     inp.readOnly = true;
     inp.tabIndex = -1;
-    inp.className = 'num-input reserve-readonly';
+    inp.className = 'num-input result-readonly';
     inp.value = '0';
     return inp;
   }
@@ -1241,7 +1244,7 @@
 
       const tdCount = document.createElement('td');
       tdCount.className = 'input-cell';
-      const inpCount = makeReserveDisplay();
+      const inpCount = makeReadonlyInput();
       tdCount.appendChild(inpCount);
       manualReserveCells[d.key + ':count'] = inpCount;
       tr.appendChild(tdCount);
@@ -1249,7 +1252,7 @@
       const tdRolls = document.createElement('td');
       if (d.hasRoll) {
         tdRolls.className = 'input-cell';
-        const inpRolls = makeReserveDisplay();
+        const inpRolls = makeReadonlyInput();
         tdRolls.appendChild(inpRolls);
         manualReserveCells[d.key + ':rolls'] = inpRolls;
       } else {
@@ -1318,17 +1321,20 @@
 
       ['deposit', 'reserve'].forEach(scope => {
         const sep = scope === 'deposit' ? ' sep-col' : '';
+
         const tdCount = document.createElement('td');
-        tdCount.className = 'value-cell';
-        tdCount.textContent = '0';
-        resultCells[scope + ':' + d.key + ':count'] = tdCount;
+        tdCount.className = 'input-cell';
+        const inpCount = makeReadonlyInput();
+        tdCount.appendChild(inpCount);
+        resultCells[scope + ':' + d.key + ':count'] = inpCount;
         tr.appendChild(tdCount);
 
         const tdRolls = document.createElement('td');
         if (d.hasRoll) {
-          tdRolls.className = 'value-cell' + sep;
-          tdRolls.textContent = '0';
-          resultCells[scope + ':' + d.key + ':rolls'] = tdRolls;
+          tdRolls.className = 'input-cell' + sep;
+          const inpRolls = makeReadonlyInput();
+          tdRolls.appendChild(inpRolls);
+          resultCells[scope + ':' + d.key + ':rolls'] = inpRolls;
         } else {
           tdRolls.className = 'no-roll' + sep;
           tdRolls.textContent = '―';
@@ -1346,9 +1352,9 @@
         const cell = resultCells[scope + ':' + d.key + ':' + field];
         if (!cell) continue;
         const v = stockMap[d.key][field] || 0;
-        cell.textContent = v;
-        cell.classList.toggle('zero', v === 0);
-        cell.classList.toggle('custom-val', scope === 'deposit' && state.custom[d.key][field] !== null);
+        cell.value = String(v);
+        const isCustom = scope === 'deposit' && state.custom[d.key][field] !== null;
+        cell.style.color = isCustom ? '#dc2626' : v === 0 ? 'var(--text-sub)' : '';
       }
     });
   }
