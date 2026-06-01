@@ -1499,7 +1499,9 @@
         register: state.register,
         custom: state.custom,
       }));
-    } catch (e) {}
+    } catch (e) {
+      showToast('⚠ 保存失敗（ストレージ容量不足）');
+    }
   }
 
   function load() {
@@ -1537,7 +1539,7 @@
 
   function saveHistoryData(history) {
     try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); }
-    catch(e) {}
+    catch(e) { showToast('⚠ 保存失敗（ストレージ容量不足）'); }
   }
 
   function todayKey() {
@@ -1548,8 +1550,24 @@
   }
 
   function saveManualRecord() {
+    // 問題4: レジ金が0円のまま保存させない
+    if (totalOf(manualState.register) === 0) {
+      alert('レジ金が0円です。入力内容を確認してください。');
+      return;
+    }
+    // 問題3: 翌日準備金が負の値なら保存させない
+    const hasNegative = DENOMS.some(d => {
+      const r = manualState.reserve[d.key];
+      return r.count < 0 || r.rolls < 0;
+    });
+    if (hasNegative) {
+      alert('翌日準備金にマイナスの値があります。銀行入金を確認してください。');
+      return;
+    }
     const dateVal = todayKey();
     const history = loadHistory();
+    // 問題2: 既存データがある場合は上書き確認
+    if (history[dateVal] && !confirm('本日のデータが既に存在します。上書きしますか？')) return;
     history[dateVal] = {
       date: dateVal,
       register: structuredClone(manualState.register),
@@ -1566,9 +1584,16 @@
   }
 
   function saveRecord() {
-    const { deposit, reserve } = calculate();
+    const { deposit, reserve, errors } = calculate();
+    // 問題4: レジ金が0円のまま保存させない
+    if (totalOf(state.register) === 0) {
+      alert('レジ金が0円です。入力内容を確認してください。');
+      return;
+    }
     const dateKey = todayKey();
     const history = loadHistory();
+    // 問題2: 既存データがある場合は上書き確認
+    if (history[dateKey] && !confirm('本日のデータが既に存在します。上書きしますか？')) return;
     history[dateKey] = {
       date: dateKey,
       register: structuredClone(state.register),
