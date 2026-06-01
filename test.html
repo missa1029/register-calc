@@ -424,6 +424,20 @@
   .bar-sub.pos { color: var(--accent); }
   .bar-sub.neg { color: var(--error-text); }
 
+  /* ===================== EXPORT RANGE MODAL ===================== */
+  .export-range-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .export-range-label {
+    font-size: 14px;
+    color: var(--text-sub);
+    white-space: nowrap;
+    width: 44px;
+  }
+
   /* ===================== MANUAL DATE ROW ===================== */
   .manual-date-wrap {
     display: flex;
@@ -840,6 +854,30 @@
       <button class="modal-close-btn" id="detail-close">✕</button>
     </div>
     <div class="modal-body" id="detail-content"></div>
+  </div>
+</div>
+
+<!-- ===== EXPORT RANGE MODAL ===== -->
+<div id="export-modal" class="modal-backdrop hidden">
+  <div class="modal-sheet">
+    <div class="modal-grip" id="export-modal-grip"></div>
+    <div class="modal-title-row">
+      <p class="modal-title">書き出し範囲</p>
+      <button class="modal-close-btn" id="export-modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="export-range-row">
+        <label class="export-range-label">開始日</label>
+        <input type="date" id="export-from" class="manual-date-input" style="pointer-events:auto;">
+      </div>
+      <div class="export-range-row">
+        <label class="export-range-label">終了日</label>
+        <input type="date" id="export-to" class="manual-date-input" style="pointer-events:auto;">
+      </div>
+      <div style="margin-top:16px;">
+        <button id="export-confirm-btn" class="save-btn" style="height:48px;font-size:15px;">Excelで書き出す</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1545,13 +1583,31 @@
     showToast('保存しました　' + dateKey.replace(/-/g, '/'));
   }
 
-  function exportExcel() {
+  function showExportModal() {
     const history = loadHistory();
-    const dates = Object.keys(history).sort().reverse();
-    if (dates.length === 0) {
-      alert('保存データがありません');
-      return;
-    }
+    const dates = Object.keys(history).sort();
+    if (dates.length === 0) { alert('保存データがありません'); return; }
+    document.getElementById('export-from').value = dates[0];
+    document.getElementById('export-to').value   = dates[dates.length - 1];
+    document.getElementById('export-modal').classList.remove('hidden');
+  }
+
+  function hideExportModal() {
+    document.getElementById('export-modal').classList.add('hidden');
+  }
+
+  function exportExcel() {
+    const fromDate = document.getElementById('export-from').value;
+    const toDate   = document.getElementById('export-to').value;
+    if (!fromDate || !toDate) { alert('日付を選択してください'); return; }
+    if (fromDate > toDate) { alert('開始日は終了日以前にしてください'); return; }
+
+    hideExportModal();
+
+    const history = loadHistory();
+    const dates = Object.keys(history).sort().reverse()
+      .filter(d => d >= fromDate && d <= toDate);
+    if (dates.length === 0) { alert('指定範囲にデータがありません'); return; }
 
     const doExport = () => {
       const BG_HDR = 'F3F4F6';
@@ -1982,7 +2038,13 @@
       showScreen('confirm');
     });
     document.getElementById('btn-back-confirm').addEventListener('click', () => showScreen('home'));
-    document.getElementById('export-btn').addEventListener('click', exportExcel);
+    document.getElementById('export-btn').addEventListener('click', showExportModal);
+    document.getElementById('export-modal-close').addEventListener('click', hideExportModal);
+    document.getElementById('export-modal-grip').addEventListener('click', hideExportModal);
+    document.getElementById('export-modal').addEventListener('click', e => {
+      if (e.target === e.currentTarget) hideExportModal();
+    });
+    document.getElementById('export-confirm-btn').addEventListener('click', exportExcel);
     document.getElementById('btn-to-home').addEventListener('click', () => {
       if (activeInput) { hideKeyboard(); activeInput.blur(); }
       showScreen('home');
