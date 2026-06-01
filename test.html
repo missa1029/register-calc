@@ -412,6 +412,27 @@
     color: var(--text);
   }
 
+  /* ===================== MANUAL TOTALS BAR WITH BACK BUTTON ===================== */
+  .manual-totals-bar {
+    display: flex !important;
+    grid-template-columns: unset !important;
+  }
+  .manual-totals-bar .total-item { flex: 1; min-width: 0; }
+  .bar-back-btn {
+    flex-shrink: 0;
+    padding: 0 14px;
+    background: var(--bg-card);
+    border: none;
+    border-right: 1px solid var(--border);
+    color: var(--accent);
+    font-size: 22px;
+    font-weight: 700;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  .bar-back-btn:active { background: var(--header-bg); }
+
   /* ===================== TOP BAR SUB-VALUE ===================== */
   .bar-sub {
     display: block;
@@ -776,11 +797,8 @@
 <!-- ===== MANUAL INPUT SCREEN ===== -->
 <div id="screen-manual" class="screen-overlay hidden">
   <div class="sticky-top">
-    <div class="nav-bar">
-      <button id="btn-manual-home" class="nav-back">← ホーム</button>
-      <span class="nav-title">手動入力</span>
-    </div>
-    <div class="totals-bar">
+    <div class="totals-bar manual-totals-bar">
+      <button id="btn-manual-home" class="bar-back-btn">←</button>
       <div class="total-item">
         <span class="label">レジ金</span>
         <span class="value" id="manual-bar-register">¥0</span>
