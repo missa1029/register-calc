@@ -725,6 +725,20 @@
     padding: 4px 8px;
     touch-action: manipulation;
   }
+  .detail-edit-btn {
+    margin-left: auto;
+    padding: 7px 16px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .detail-edit-btn:active { opacity: 0.8; }
   .modal-body { padding: 0 12px 20px; }
   .modal-summary {
     display: grid;
@@ -870,6 +884,7 @@
     <div class="modal-grip" id="detail-grip"></div>
     <div class="modal-title-row">
       <p class="modal-title" id="detail-date-label"></p>
+      <button class="detail-edit-btn" id="detail-edit">編集</button>
       <button class="modal-close-btn" id="detail-close">✕</button>
     </div>
     <div class="modal-body" id="detail-content"></div>
@@ -1041,6 +1056,7 @@
   resetState();
 
   let manualTarget = 300000;
+  let editingDate = null;
 
   const manualState = { register: {}, deposit: {}, reserve: {} };
   function resetManualState() {
@@ -1591,9 +1607,9 @@
       alert('翌日準備金が目標金額と一致していません。差額を確認してください。');
       return;
     }
-    const dateVal = todayKey();
+    const dateVal = editingDate || todayKey();
     const history = loadHistory();
-    if (history[dateVal] && !confirm('本日のデータが既に存在します。上書きしますか？')) return;
+    if (!editingDate && history[dateVal] && !confirm('本日のデータが既に存在します。上書きしますか？')) return;
     history[dateVal] = {
       date: dateVal,
       register: structuredClone(manualState.register),
@@ -1607,6 +1623,7 @@
     };
     saveHistoryData(history);
     showToast('保存しました　' + dateVal.replace(/-/g, '/'));
+    editingDate = null;
   }
 
   function saveRecord() {
@@ -1882,7 +1899,32 @@
     html += '</tbody></table>';
     content.innerHTML = html;
 
+    document.getElementById('detail-edit').onclick = () => startEdit(dateKey, rec);
     document.getElementById('detail-modal').classList.remove('hidden');
+  }
+
+  function startEdit(dateKey, rec) {
+    editingDate = dateKey;
+    manualTarget = rec.target || 300000;
+
+    DENOMS.forEach(d => {
+      manualState.register[d.key] = rec.register[d.key]
+        ? structuredClone(rec.register[d.key]) : { count: 0, rolls: 0 };
+      manualState.deposit[d.key] = rec.deposit[d.key]
+        ? structuredClone(rec.deposit[d.key])  : { count: 0, rolls: 0 };
+      manualState.reserve[d.key] = rec.reserve[d.key]
+        ? structuredClone(rec.reserve[d.key])  : { count: 0, rolls: 0 };
+    });
+
+    const radio = document.querySelector(`input[name="manual-target"][value="${manualTarget}"]`);
+    if (radio) radio.checked = true;
+
+    hideDetail();
+    document.getElementById('manual-date').value = dateKey;
+    showScreen('manual');
+    buildManualBodies();
+    updateManualTotals();
+    alignManualTables();
   }
 
   function hideDetail() {
@@ -2089,6 +2131,7 @@
     });
     document.getElementById('btn-manual-home').addEventListener('click', () => {
       if (activeInput) { hideKeyboard(); activeInput.blur(); }
+      editingDate = null;
       showScreen('home');
     });
     document.getElementById('manual-save-btn').addEventListener('click', saveManualRecord);
