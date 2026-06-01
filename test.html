@@ -128,12 +128,12 @@
 
   /* ===================== TOTALS BAR ===================== */
   .totals-bar {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
+    display: flex;
     gap: 1px;
     background: var(--border);
     border-bottom: 1px solid var(--border);
   }
+  .totals-bar .total-item { flex: 1; }
   .total-item {
     background: var(--bg-card);
     padding: 10px 6px;
@@ -413,11 +413,6 @@
   }
 
   /* ===================== MANUAL TOTALS BAR WITH BACK BUTTON ===================== */
-  .manual-totals-bar {
-    display: flex !important;
-    grid-template-columns: unset !important;
-  }
-  .manual-totals-bar .total-item { flex: 1; min-width: 0; }
   .bar-back-btn {
     flex-shrink: 0;
     padding: 0 14px;
@@ -1057,6 +1052,8 @@
 
   let manualTarget = 300000;
   let editingDate = null;
+  let currentDetailKey = null;
+  let currentDetailRec = null;
 
   const manualState = { register: {}, deposit: {}, reserve: {} };
   function resetManualState() {
@@ -1622,8 +1619,8 @@
       manual: true,
     };
     saveHistoryData(history);
-    showToast('保存しました　' + dateVal.replace(/-/g, '/'));
     editingDate = null;
+    showToast('保存しました　' + dateVal.replace(/-/g, '/'));
   }
 
   function saveRecord() {
@@ -1806,6 +1803,7 @@
       activeScrollEl = document.getElementById('screen-manual');
     } else {
       activeScrollEl = scrollEl;
+      editingDate = null;
     }
   }
 
@@ -1899,28 +1897,29 @@
     html += '</tbody></table>';
     content.innerHTML = html;
 
-    document.getElementById('detail-edit').onclick = () => startEdit(dateKey, rec);
+    currentDetailKey = dateKey;
+    currentDetailRec = rec;
     document.getElementById('detail-modal').classList.remove('hidden');
   }
 
   function startEdit(dateKey, rec) {
     editingDate = dateKey;
-    manualTarget = rec.target || 300000;
+    manualTarget = rec.target ?? 300000;
 
     DENOMS.forEach(d => {
       manualState.register[d.key] = rec.register[d.key]
-        ? structuredClone(rec.register[d.key]) : { count: 0, rolls: 0 };
+        ? { ...rec.register[d.key] } : { count: 0, rolls: 0 };
       manualState.deposit[d.key] = rec.deposit[d.key]
-        ? structuredClone(rec.deposit[d.key])  : { count: 0, rolls: 0 };
+        ? { ...rec.deposit[d.key] }  : { count: 0, rolls: 0 };
       manualState.reserve[d.key] = rec.reserve[d.key]
-        ? structuredClone(rec.reserve[d.key])  : { count: 0, rolls: 0 };
+        ? { ...rec.reserve[d.key] }  : { count: 0, rolls: 0 };
     });
 
     const radio = document.querySelector(`input[name="manual-target"][value="${manualTarget}"]`);
     if (radio) radio.checked = true;
+    document.getElementById('manual-date').value = dateKey;
 
     hideDetail();
-    document.getElementById('manual-date').value = dateKey;
     showScreen('manual');
     buildManualBodies();
     updateManualTotals();
@@ -2131,7 +2130,6 @@
     });
     document.getElementById('btn-manual-home').addEventListener('click', () => {
       if (activeInput) { hideKeyboard(); activeInput.blur(); }
-      editingDate = null;
       showScreen('home');
     });
     document.getElementById('manual-save-btn').addEventListener('click', saveManualRecord);
@@ -2158,6 +2156,9 @@
 
     // Detail modal
     document.getElementById('detail-close').addEventListener('click', hideDetail);
+    document.getElementById('detail-edit').addEventListener('click', () => {
+      if (currentDetailKey) startEdit(currentDetailKey, currentDetailRec);
+    });
     document.getElementById('detail-grip').addEventListener('click', hideDetail);
     document.getElementById('detail-modal').addEventListener('click', e => {
       if (e.target === e.currentTarget) hideDetail();
