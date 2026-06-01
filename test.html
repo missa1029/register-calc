@@ -1705,7 +1705,10 @@
         XLSX.utils.book_append_sheet(wb, ws, sheetName);
       });
 
-      XLSX.writeFile(wb, '入金計算_' + todayKey() + '.xlsx');
+      const fileName = fromDate === toDate
+        ? '入金表_' + fromDate
+        : '入金表_' + fromDate + '~' + toDate.slice(5);
+      XLSX.writeFile(wb, fileName + '.xlsx');
     };
 
     if (typeof XLSX === 'undefined') {
