@@ -415,12 +415,13 @@
   /* ===================== TOP BAR SUB-VALUE ===================== */
   .bar-sub {
     display: block;
-    font-size: 11px;
-    margin-top: 2px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-top: 3px;
     font-variant-numeric: tabular-nums;
     color: var(--text-sub);
   }
-  .bar-sub.ok  { color: #16a34a; font-weight: 700; }
+  .bar-sub.ok  { color: #16a34a; }
   .bar-sub.pos { color: var(--accent); }
   .bar-sub.neg { color: var(--error-text); }
 
@@ -1550,18 +1551,30 @@
   }
 
   function saveManualRecord() {
-    // 問題4: レジ金が0円のまま保存させない
+    // レジ金が0円のまま保存させない
     if (totalOf(manualState.register) === 0) {
       alert('レジ金が0円です。入力内容を確認してください。');
       return;
     }
-    // 問題3: 翌日準備金が負の値なら保存させない
+    // 翌日準備金が負の値なら保存させない
     const hasNegative = DENOMS.some(d => {
       const r = manualState.reserve[d.key];
       return r.count < 0 || r.rolls < 0;
     });
     if (hasNegative) {
       alert('翌日準備金にマイナスの値があります。銀行入金を確認してください。');
+      return;
+    }
+    // 差額がゼロでなければ保存させない
+    const tReg = totalOf(manualState.register);
+    const tDep = totalOf(manualState.deposit);
+    const tRes = totalOf(manualState.reserve);
+    if (tDep !== Math.max(0, tReg - manualTarget)) {
+      alert('銀行入金が目標金額と一致していません。差額を確認してください。');
+      return;
+    }
+    if (tRes !== manualTarget) {
+      alert('翌日準備金が目標金額と一致していません。差額を確認してください。');
       return;
     }
     const dateVal = todayKey();
