@@ -461,8 +461,8 @@
     border-radius: 6px;
     background: var(--bg);
     color: var(--text);
-    pointer-events: none;
   }
+  #manual-date { pointer-events: none; }
 
   /* ===================== MANUAL TABLES ===================== */
   .manual-tables {
@@ -869,11 +869,11 @@
     <div class="modal-body">
       <div class="export-range-row">
         <label class="export-range-label">開始日</label>
-        <input type="date" id="export-from" class="manual-date-input" style="pointer-events:auto;">
+        <input type="date" id="export-from" class="manual-date-input">
       </div>
       <div class="export-range-row">
         <label class="export-range-label">終了日</label>
-        <input type="date" id="export-to" class="manual-date-input" style="pointer-events:auto;">
+        <input type="date" id="export-to" class="manual-date-input">
       </div>
       <div style="margin-top:16px;">
         <button id="export-confirm-btn" class="save-btn" style="height:48px;font-size:15px;">Excelで書き出す</button>
@@ -1551,12 +1551,14 @@
   }
 
   function saveManualRecord() {
-    // レジ金が0円のまま保存させない
-    if (totalOf(manualState.register) === 0) {
+    const tReg = totalOf(manualState.register);
+    const tDep = totalOf(manualState.deposit);
+    const tRes = totalOf(manualState.reserve);
+
+    if (tReg === 0) {
       alert('レジ金が0円です。入力内容を確認してください。');
       return;
     }
-    // 翌日準備金が負の値なら保存させない
     const hasNegative = DENOMS.some(d => {
       const r = manualState.reserve[d.key];
       return r.count < 0 || r.rolls < 0;
@@ -1565,10 +1567,6 @@
       alert('翌日準備金にマイナスの値があります。銀行入金を確認してください。');
       return;
     }
-    // 差額がゼロでなければ保存させない
-    const tReg = totalOf(manualState.register);
-    const tDep = totalOf(manualState.deposit);
-    const tRes = totalOf(manualState.reserve);
     if (tDep !== Math.max(0, tReg - manualTarget)) {
       alert('銀行入金が目標金額と一致していません。差額を確認してください。');
       return;
@@ -1579,7 +1577,6 @@
     }
     const dateVal = todayKey();
     const history = loadHistory();
-    // 問題2: 既存データがある場合は上書き確認
     if (history[dateVal] && !confirm('本日のデータが既に存在します。上書きしますか？')) return;
     history[dateVal] = {
       date: dateVal,
@@ -1597,15 +1594,13 @@
   }
 
   function saveRecord() {
-    const { deposit, reserve, errors } = calculate();
-    // 問題4: レジ金が0円のまま保存させない
+    const { deposit, reserve } = calculate();
     if (totalOf(state.register) === 0) {
       alert('レジ金が0円です。入力内容を確認してください。');
       return;
     }
     const dateKey = todayKey();
     const history = loadHistory();
-    // 問題2: 既存データがある場合は上書き確認
     if (history[dateKey] && !confirm('本日のデータが既に存在します。上書きしますか？')) return;
     history[dateKey] = {
       date: dateKey,
