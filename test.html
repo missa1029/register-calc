@@ -1386,6 +1386,15 @@
     if (!regBody || !comBody) return;
 
     const regHeaderRow = regBody.closest('table').querySelector('thead tr');
+    const resultRows = document.querySelectorAll('#result-body tr');
+
+    // モバイル縦画面（1列レイアウト）ではスタイルをリセットして終了
+    if (window.innerWidth <= 899) {
+      if (regHeaderRow) regHeaderRow.style.height = '';
+      resultRows.forEach(row => { row.style.height = ''; });
+      return;
+    }
+
     if (regHeaderRow) regHeaderRow.style.height = '';
 
     requestAnimationFrame(() => {
@@ -1396,7 +1405,6 @@
         }
       }
       const inputRows = document.querySelectorAll('#register-body tr');
-      const resultRows = document.querySelectorAll('#result-body tr');
       inputRows.forEach((row, i) => {
         if (resultRows[i]) resultRows[i].style.height = row.offsetHeight + 'px';
       });
