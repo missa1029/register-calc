@@ -1922,13 +1922,21 @@
 
   function showKeyboard() {
     kbEl.classList.remove('hidden');
-    if (activeScrollEl) activeScrollEl.style.bottom = kbHeight + 'px';
+    if (activeScrollEl) {
+      activeScrollEl.style.bottom = kbHeight + 'px';
+      const saveArea = activeScrollEl.querySelector('.save-area');
+      if (saveArea) saveArea.style.display = 'none';
+    }
     if (activeInput) scrollToInput(activeInput);
   }
 
   function hideKeyboard() {
     kbEl.classList.add('hidden');
-    if (activeScrollEl) activeScrollEl.style.bottom = '0';
+    if (activeScrollEl) {
+      activeScrollEl.style.bottom = '0';
+      const saveArea = activeScrollEl.querySelector('.save-area');
+      if (saveArea) saveArea.style.display = '';
+    }
     activeInput = null;
   }
 
