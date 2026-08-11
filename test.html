@@ -452,7 +452,7 @@
     background: var(--bg);
     color: var(--text);
   }
-  #manual-date { pointer-events: none; }
+  .manual-date-input[readonly] { pointer-events: none; }
 
   /* ===================== MANUAL TABLES ===================== */
   .manual-tables {
@@ -905,6 +905,11 @@
         <span class="value" id="bar-reserve">¥0</span>
       </div>
     </div>
+  </div>
+
+  <div class="manual-date-wrap">
+    <label class="manual-date-label" for="input-date">日付</label>
+    <input type="date" id="input-date" class="manual-date-input" readonly>
   </div>
 
   <div class="settings">
@@ -2165,6 +2170,7 @@
     kbHeight = kbEl.offsetHeight;
     kbEl.classList.add('hidden');
     load();
+    document.getElementById('input-date').value = todayKey();
     const r = document.querySelector('input[name="target"][value="' + state.target + '"]');
     if (r) r.checked = true;
     buildInputBody('register-body', 'register');
