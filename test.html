@@ -105,26 +105,6 @@
     top: 0;
     z-index: 100;
   }
-  .nav-bar {
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border);
-    padding: 8px 12px;
-    padding-top: calc(8px + env(safe-area-inset-top));
-    display: flex;
-    align-items: center;
-  }
-  .nav-back {
-    background: none;
-    border: none;
-    color: var(--accent);
-    font-size: 15px;
-    font-weight: 500;
-    cursor: pointer;
-    padding: 6px 0;
-    min-height: 36px;
-    white-space: nowrap;
-    touch-action: manipulation;
-  }
 
   /* ===================== TOTALS BAR ===================== */
   .totals-bar {
@@ -405,28 +385,22 @@
     .table-section.combined td:nth-child(5) { width: 21%; }
   }
 
-  /* ===================== NAV TITLE ===================== */
-  .nav-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text);
-  }
-
   /* ===================== MANUAL TOTALS BAR WITH BACK BUTTON ===================== */
   .bar-back-btn {
     flex-shrink: 0;
     padding: 0 14px;
-    background: var(--bg-card);
+    min-height: 44px;
+    background: var(--accent);
     border: none;
     border-right: 1px solid var(--border);
-    color: var(--accent);
+    color: #fff;
     font-size: 22px;
     font-weight: 700;
     cursor: pointer;
     -webkit-tap-highlight-color: transparent;
     touch-action: manipulation;
   }
-  .bar-back-btn:active { background: var(--header-bg); }
+  .bar-back-btn:active { opacity: 0.85; }
 
   /* ===================== TOP BAR SUB-VALUE ===================== */
   .bar-sub {
@@ -603,7 +577,7 @@
   .confirm-header {
     background: var(--bg-card);
     border-bottom: 1px solid var(--border);
-    padding: 14px 12px;
+    padding: 14px 12px 14px 0;
     padding-top: calc(14px + env(safe-area-inset-top));
     position: sticky;
     top: 0;
@@ -798,7 +772,7 @@
   <div class="home-wrap">
     <h1 class="home-title">入金計算</h1>
     <button id="btn-to-manual" class="home-btn secondary">手動入力</button>
-    <button id="btn-to-input" class="home-btn">自動計算</button>
+    <button id="btn-to-input" class="home-btn secondary">自動計算</button>
     <button id="btn-to-confirm" class="home-btn secondary">確認</button>
   </div>
 </div>
@@ -866,7 +840,7 @@
 <!-- ===== CONFIRM SCREEN ===== -->
 <div id="screen-confirm" class="screen-overlay hidden">
   <div class="confirm-header">
-    <button id="btn-back-confirm" class="nav-back">← 戻る</button>
+    <button id="btn-back-confirm" class="bar-back-btn">←</button>
     <h2>保存データ</h2>
     <button id="export-btn" class="export-btn">Excelで書き出す</button>
   </div>
@@ -2027,7 +2001,7 @@
       if (!(t instanceof HTMLInputElement) || !t.classList.contains('num-input')) return;
       if (t.readOnly) return;
       t.dataset.fresh = 'true';
-      if (navigator.maxTouchPoints > 0 || 'ontouchstart' in window) {
+      if (isTouch) {
         clearTimeout(hideTimer);
         activeInput = t;
         showKeyboard();
@@ -2057,7 +2031,7 @@
     });
 
     document.addEventListener('focusout', (e) => {
-      if (!(navigator.maxTouchPoints > 0 || 'ontouchstart' in window)) return;
+      if (!isTouch) return;
       const t = e.target;
       if (!(t instanceof HTMLInputElement) || !t.classList.contains('num-input')) return;
       clearTimeout(hideTimer);
