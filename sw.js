@@ -1,4 +1,4 @@
-const CACHE = 'nyukin-v2';
+const CACHE = 'nyukin-v3';
 const FILES = ['./test.html', './icon.svg'];
 
 self.addEventListener('install', e => {
