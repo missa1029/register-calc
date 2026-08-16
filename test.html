@@ -137,15 +137,6 @@
     word-break: break-all;
   }
 
-  .settings {
-    padding: 10px 12px;
-    background: var(--bg-card);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-  }
   .target-select {
     display: flex;
     gap: 4px;
@@ -169,7 +160,7 @@
     border-color: var(--accent);
     color: #fff;
   }
-  #reset-btn {
+  .reset-btn {
     margin-left: auto;
     padding: 0 16px;
     height: 44px;
@@ -180,7 +171,7 @@
     cursor: pointer;
     font-size: 14px;
   }
-  #reset-btn:active { background: var(--header-bg); }
+  .reset-btn:active { background: var(--header-bg); }
 
   #error {
     margin: 10px 12px 0;
@@ -432,6 +423,7 @@
   /* ===================== MANUAL DATE ROW ===================== */
   .manual-date-wrap {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 10px;
     padding: 10px 12px;
@@ -807,6 +799,7 @@
       <label><input type="radio" name="manual-target" value="290000"><span>29万</span></label>
       <label><input type="radio" name="manual-target" value="260000"><span>26万</span></label>
     </div>
+    <button id="manual-reset-btn" type="button" class="reset-btn">リセット</button>
   </div>
 
   <div class="manual-tables">
@@ -911,16 +904,12 @@
   <div class="manual-date-wrap">
     <label class="manual-date-label" for="input-date">日付</label>
     <input type="date" id="input-date" class="manual-date-input" readonly>
-  </div>
-
-  <div class="settings">
-    <span style="font-size:13px;color:var(--text-sub);">翌日準備金</span>
-    <div class="target-select">
+    <div class="target-select" style="margin-left:auto;">
       <label><input type="radio" name="target" value="300000" checked><span>30万</span></label>
       <label><input type="radio" name="target" value="290000"><span>29万</span></label>
       <label><input type="radio" name="target" value="260000"><span>26万</span></label>
     </div>
-    <button id="reset-btn" type="button">リセット</button>
+    <button id="reset-btn" type="button" class="reset-btn">リセット</button>
   </div>
 
   <div id="error" class="hidden"></div>
@@ -1014,6 +1003,7 @@
   const RESERVED_1000_COUNT = 30;
   const STORAGE_KEY   = 'nyukin_keisan_v1';
   const HISTORY_KEY   = 'nyukin_history_v1';
+  const MANUAL_STORAGE_KEY = 'nyukin_manual_v1';
 
   const DENOM_MAP = new Map(DENOMS.map(d => [d.key, d]));
 
@@ -1542,6 +1532,36 @@
     } catch (e) {}
   }
 
+  function saveManual() {
+    try {
+      localStorage.setItem(MANUAL_STORAGE_KEY, JSON.stringify({
+        target: manualTarget,
+        register: manualState.register,
+        deposit: manualState.deposit,
+      }));
+    } catch (e) {
+      showToast('⚠ 保存失敗（ストレージ容量不足）');
+    }
+  }
+
+  function loadManual() {
+    try {
+      const raw = localStorage.getItem(MANUAL_STORAGE_KEY);
+      if (!raw) return;
+      const data = JSON.parse(raw);
+      if (typeof data.target === 'number') manualTarget = data.target;
+      ['register', 'deposit'].forEach(section => {
+        if (!data[section]) return;
+        DENOMS.forEach(d => {
+          if (data[section][d.key]) {
+            manualState[section][d.key].count = Number(data[section][d.key].count) || 0;
+            manualState[section][d.key].rolls = Number(data[section][d.key].rolls) || 0;
+          }
+        });
+      });
+    } catch (e) {}
+  }
+
   // ===== HISTORY =====
   function loadHistory() {
     try { return JSON.parse(localStorage.getItem(HISTORY_KEY)) || {}; }
@@ -1991,6 +2011,7 @@
       const field = t.dataset.field;
       if (t.classList.contains('manual-input')) {
         manualState[t.dataset.section][key][field] = filtered === '' ? 0 : parseInt(filtered, 10);
+        saveManual();
         updateManualTotals();
       } else {
         if (t.classList.contains('register-input')) {
@@ -2097,12 +2118,24 @@
     document.querySelectorAll('input[name="manual-target"]').forEach(r => {
       r.addEventListener('change', () => {
         manualTarget = parseInt(r.value, 10);
+        saveManual();
         updateManualTotals();
       });
     });
 
-    document.getElementById('btn-to-manual').addEventListener('click', () => {
+    document.getElementById('manual-reset-btn').addEventListener('click', () => {
+      if (!confirm('全ての入力をリセットしますか？')) return;
       resetManualState();
+      manualTarget = 300000;
+      const r = document.querySelector('input[name="manual-target"][value="300000"]');
+      if (r) r.checked = true;
+      saveManual();
+      buildManualBodies();
+      updateManualTotals();
+      alignManualTables();
+    });
+
+    document.getElementById('btn-to-manual').addEventListener('click', () => {
       buildManualBodies();
       updateManualTotals();
       document.getElementById('manual-date').value = todayKey();
@@ -2178,6 +2211,9 @@
     buildInputBody('register-body', 'register');
     buildInputBody('custom-body', 'custom');
     buildResultBody();
+    loadManual();
+    const mr = document.querySelector('input[name="manual-target"][value="' + manualTarget + '"]');
+    if (mr) mr.checked = true;
     buildManualBodies();
     alignTables();
     alignManualTables();
