@@ -389,7 +389,7 @@
   .bar-back-btn {
     flex-shrink: 0;
     padding: 0 14px;
-    min-height: 44px;
+    min-height: 64px;
     background: var(--accent);
     border: none;
     border-right: 1px solid var(--border);
@@ -577,8 +577,8 @@
   .confirm-header {
     background: var(--bg-card);
     border-bottom: 1px solid var(--border);
-    padding: 14px 12px 14px 0;
-    padding-top: calc(14px + env(safe-area-inset-top));
+    padding: 0 12px 0 0;
+    padding-top: env(safe-area-inset-top);
     position: sticky;
     top: 0;
     z-index: 10;
@@ -805,6 +805,7 @@
     <div class="target-select" style="margin-left:auto;">
       <label><input type="radio" name="manual-target" value="300000" checked><span>30万</span></label>
       <label><input type="radio" name="manual-target" value="290000"><span>29万</span></label>
+      <label><input type="radio" name="manual-target" value="260000"><span>26万</span></label>
     </div>
   </div>
 
@@ -917,6 +918,7 @@
     <div class="target-select">
       <label><input type="radio" name="target" value="300000" checked><span>30万</span></label>
       <label><input type="radio" name="target" value="290000"><span>29万</span></label>
+      <label><input type="radio" name="target" value="260000"><span>26万</span></label>
     </div>
     <button id="reset-btn" type="button">リセット</button>
   </div>
@@ -965,7 +967,7 @@
   </div>
 
   <div class="save-area">
-    <button id="save-btn" class="save-btn">この日のデータを保存</button>
+    <button id="save-btn" class="save-btn">保存</button>
   </div>
 </div><!-- /scroll-container -->
 
