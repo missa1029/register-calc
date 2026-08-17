@@ -137,28 +137,20 @@
     word-break: break-all;
   }
 
-  .target-select {
+  .target-amount-wrap {
     display: flex;
-    gap: 4px;
-  }
-  .target-select label {
-    cursor: pointer;
-    padding: 8px 14px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    font-size: 14px;
-    background: var(--bg);
-    user-select: none;
-    min-height: 44px;
-    display: inline-flex;
     align-items: center;
+    gap: 6px;
   }
-  .target-select input { display: none; }
-  .target-select input:checked + span { color: #fff; }
-  .target-select label:has(input:checked) {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
+  .target-amount-wrap input.target-amount-input {
+    width: 64px;
+    min-width: 0;
+    text-align: center;
+  }
+  .target-amount-unit {
+    font-size: 14px;
+    color: var(--text-sub);
+    white-space: nowrap;
   }
   .reset-btn {
     margin-left: auto;
@@ -173,7 +165,7 @@
   }
   .reset-btn:active { background: var(--header-bg); }
 
-  #error {
+  .error-banner {
     margin: 10px 12px 0;
     padding: 10px 12px;
     background: var(--error-bg);
@@ -182,7 +174,7 @@
     font-weight: 500;
     font-size: 14px;
   }
-  #error div + div { margin-top: 4px; }
+  .error-banner div + div { margin-top: 4px; }
   .hidden { display: none !important; }
 
   .custom-details {
@@ -794,13 +786,14 @@
   <div class="manual-date-wrap">
     <label class="manual-date-label" for="manual-date">日付</label>
     <input type="date" id="manual-date" class="manual-date-input" readonly>
-    <div class="target-select" style="margin-left:auto;">
-      <label><input type="radio" name="manual-target" value="300000" checked><span>30万</span></label>
-      <label><input type="radio" name="manual-target" value="290000"><span>29万</span></label>
-      <label><input type="radio" name="manual-target" value="260000"><span>26万</span></label>
+    <div class="target-amount-wrap" style="margin-left:auto;">
+      <input type="text" id="manual-target-input" class="num-input target-amount-input" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="30">
+      <span class="target-amount-unit">万円</span>
     </div>
     <button id="manual-reset-btn" type="button" class="reset-btn">リセット</button>
   </div>
+
+  <div id="manual-error" class="error-banner hidden"></div>
 
   <div class="manual-tables">
     <section class="table-section">
@@ -904,15 +897,14 @@
   <div class="manual-date-wrap">
     <label class="manual-date-label" for="input-date">日付</label>
     <input type="date" id="input-date" class="manual-date-input" readonly>
-    <div class="target-select" style="margin-left:auto;">
-      <label><input type="radio" name="target" value="300000" checked><span>30万</span></label>
-      <label><input type="radio" name="target" value="290000"><span>29万</span></label>
-      <label><input type="radio" name="target" value="260000"><span>26万</span></label>
+    <div class="target-amount-wrap" style="margin-left:auto;">
+      <input type="text" id="target-input" class="num-input target-amount-input" inputmode="numeric" pattern="[0-9]*" autocomplete="off" value="30">
+      <span class="target-amount-unit">万円</span>
     </div>
     <button id="reset-btn" type="button" class="reset-btn">リセット</button>
   </div>
 
-  <div id="error" class="hidden"></div>
+  <div id="error" class="error-banner hidden"></div>
 
   <details class="custom-details">
     <summary>カスタム指示（銀行入金）</summary>
@@ -1298,12 +1290,20 @@
   }
 
   function updateManualReserve() {
+    const errors = [];
     DENOMS.forEach(d => {
       const reg = manualState.register[d.key];
       const dep = manualState.deposit[d.key];
       const count = (reg.count || 0) - (dep.count || 0);
       const rolls = (reg.rolls || 0) - (dep.rolls || 0);
       manualState.reserve[d.key] = { count, rolls };
+
+      if (count < 0) {
+        errors.push(d.label + ': 銀行入金の枚数（' + dep.count + '枚）がレジ金の枚数（' + reg.count + '枚）を超えています');
+      }
+      if (d.hasRoll && rolls < 0) {
+        errors.push(d.label + '棒金: 銀行入金の本数（' + dep.rolls + '本）がレジ金の本数（' + reg.rolls + '本）を超えています');
+      }
 
       const cc = manualReserveCells[d.key + ':count'];
       if (cc) {
@@ -1318,6 +1318,7 @@
         rc.style.color = rolls < 0 ? 'var(--error-text)' : '';
       }
     });
+    return errors;
   }
 
   function makeManualInput(d, field, section) {
@@ -1336,7 +1337,14 @@
   }
 
   function updateManualTotals() {
-    updateManualReserve();
+    const errors = updateManualReserve();
+    if (errors.length) {
+      elManualError.innerHTML = errors.map(e => '<div>⚠ ' + escapeHtml(e) + '</div>').join('');
+      elManualError.classList.remove('hidden');
+    } else {
+      elManualError.classList.add('hidden');
+    }
+
     const tReg = totalOf(manualState.register);
     const tDep = totalOf(manualState.deposit);
     const tRes = totalOf(manualState.reserve);
@@ -1916,8 +1924,7 @@
         ? { ...rec.reserve[d.key] }  : { count: 0, rolls: 0 };
     });
 
-    const radio = document.querySelector(`input[name="manual-target"][value="${manualTarget}"]`);
-    if (radio) radio.checked = true;
+    document.getElementById('manual-target-input').value = manualTarget / 10000;
     document.getElementById('manual-date').value = dateKey;
 
     hideDetail();
@@ -1941,6 +1948,7 @@
   let elManualDepTarget, elManualDepActual;
   let elManualResTarget, elManualResActual;
   let elManualRegTotal, elManualDepTotal, elManualResTotal;
+  let elManualError;
   const resultCells = {};
   const manualReserveCells = {};
 
@@ -2001,11 +2009,26 @@
     document.addEventListener('input', (e) => {
       const t = e.target;
       if (!(t instanceof HTMLInputElement)) return;
-      if (!t.classList.contains('register-input') && !t.classList.contains('custom-input') && !t.classList.contains('manual-input')) return;
+      const isTargetAmount = t.classList.contains('target-amount-input');
+      if (!t.classList.contains('register-input') && !t.classList.contains('custom-input') && !t.classList.contains('manual-input') && !isTargetAmount) return;
 
       const normalized = t.value.replace(/[０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
       const filtered = normalized.replace(/[^0-9]/g, '');
       if (t.value !== filtered) t.value = filtered;
+
+      if (isTargetAmount) {
+        const amount = (filtered === '' ? 0 : parseInt(filtered, 10)) * 10000;
+        if (t.id === 'manual-target-input') {
+          manualTarget = amount;
+          saveManual();
+          updateManualTotals();
+        } else {
+          state.target = amount;
+          save();
+          update();
+        }
+        return;
+      }
 
       const key = t.dataset.key;
       const field = t.dataset.field;
@@ -2094,41 +2117,22 @@
   }
 
   function bindControls() {
-    document.querySelectorAll('input[name="target"]').forEach(r => {
-      r.addEventListener('change', () => {
-        state.target = parseInt(r.value, 10);
-        save();
-        update();
-      });
-    });
-
     document.getElementById('reset-btn').addEventListener('click', () => {
       if (!confirm('全ての入力をリセットしますか？')) return;
       resetState();
       state.target = 300000;
-      const r = document.querySelector('input[name="target"][value="300000"]');
-      if (r) r.checked = true;
+      document.getElementById('target-input').value = 30;
       save();
       buildInputBody('register-body', 'register');
       buildInputBody('custom-body', 'custom');
       update();
     });
 
-    // Screen navigation
-    document.querySelectorAll('input[name="manual-target"]').forEach(r => {
-      r.addEventListener('change', () => {
-        manualTarget = parseInt(r.value, 10);
-        saveManual();
-        updateManualTotals();
-      });
-    });
-
     document.getElementById('manual-reset-btn').addEventListener('click', () => {
       if (!confirm('全ての入力をリセットしますか？')) return;
       resetManualState();
       manualTarget = 300000;
-      const r = document.querySelector('input[name="manual-target"][value="300000"]');
-      if (r) r.checked = true;
+      document.getElementById('manual-target-input').value = 30;
       saveManual();
       buildManualBodies();
       updateManualTotals();
@@ -2197,6 +2201,7 @@
     elManualRegTotal    = document.getElementById('manual-reg-total');
     elManualDepTotal    = document.getElementById('manual-dep-total');
     elManualResTotal    = document.getElementById('manual-res-total');
+    elManualError       = document.getElementById('manual-error');
 
     kbEl = document.getElementById('custom-kb');
     scrollEl = document.getElementById('scroll-container');
@@ -2206,14 +2211,14 @@
     kbEl.classList.add('hidden');
     load();
     document.getElementById('input-date').value = todayKey();
-    const r = document.querySelector('input[name="target"][value="' + state.target + '"]');
-    if (r) r.checked = true;
+    document.getElementById('target-input').inputMode = isTouch ? 'none' : 'numeric';
+    document.getElementById('manual-target-input').inputMode = isTouch ? 'none' : 'numeric';
+    document.getElementById('target-input').value = state.target / 10000;
     buildInputBody('register-body', 'register');
     buildInputBody('custom-body', 'custom');
     buildResultBody();
     loadManual();
-    const mr = document.querySelector('input[name="manual-target"][value="' + manualTarget + '"]');
-    if (mr) mr.checked = true;
+    document.getElementById('manual-target-input').value = manualTarget / 10000;
     buildManualBodies();
     alignTables();
     alignManualTables();
