@@ -2241,6 +2241,13 @@
 
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('./sw.js');
+
+  let swRefreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (swRefreshing) return;
+    swRefreshing = true;
+    location.reload();
+  });
 }
 </script>
 </body>
